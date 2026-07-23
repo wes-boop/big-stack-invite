@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Old Works Invitational — Tour Board</title>
+<style>
+  :root{
+    --bg:#081710; --panel:#0e2418; --panel2:#123021; --line:#1d4230;
+    --gold:#d9b64e; --gold-dim:#9c8330; --txt:#eef3ee; --muted:#8fa89a;
+    --red:#ff6057; --green:#54d98c; --blue:#7fb3ff;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:radial-gradient(1200px 600px at 50% -10%, #10311f 0%, var(--bg) 60%);
+    color:var(--txt); font-family:"Helvetica Neue", Arial, sans-serif;
+    display:flex; flex-direction:column; height:100vh; overflow:hidden;
+  }
+  header{
+    padding:14px 22px 10px; border-bottom:2px solid var(--gold-dim);
+    display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+    background:linear-gradient(180deg, rgba(217,182,78,.07), transparent);
+  }
+  .crest{
+    width:46px;height:46px;border:2px solid var(--gold);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--gold);
+    flex:0 0 auto;
+  }
+  .title h1{
+    font-size:clamp(18px,2.6vw,30px); letter-spacing:.14em; font-weight:800;
+    color:var(--gold); text-transform:uppercase; white-space:nowrap;
+  }
+  .title .sub{font-size:clamp(10px,1.2vw,13px); letter-spacing:.22em; color:var(--muted); text-transform:uppercase; margin-top:2px;}
+  .purse{margin-left:auto; text-align:right;}
+  .purse .lbl{font-size:10px;letter-spacing:.25em;color:var(--muted);text-transform:uppercase;}
+  .purse .amt{font-size:clamp(20px,2.4vw,30px);font-weight:800;color:var(--gold);}
+  nav{
+    display:flex; gap:6px; padding:8px 18px; border-bottom:1px solid var(--line);
+    background:rgba(0,0,0,.25); flex-wrap:wrap; align-items:center;
+  }
+  nav button{
+    background:transparent; border:1px solid transparent; color:var(--muted);
+    font-size:12px; letter-spacing:.18em; text-transform:uppercase; font-weight:700;
+    padding:8px 14px; cursor:pointer; border-radius:4px;
+  }
+  nav button:hover{color:var(--txt);}
+  nav button.active{color:var(--gold); border-color:var(--gold-dim); background:rgba(217,182,78,.08);}
+  nav .spacer{flex:1;}
+  nav .util{font-size:11px; letter-spacing:.1em; border:1px solid var(--line); color:var(--muted);}
+  nav .util:hover{border-color:var(--gold-dim); color:var(--gold);}
+  main{flex:1; overflow:auto; padding:16px 22px 28px;}
+  h2.section{
+    font-size:13px; letter-spacing:.28em; color:var(--gold); text-transform:uppercase;
+    margin:6px 0 12px; font-weight:800;
+  }
+  .boardwrap{overflow-x:auto;}
+  table.board{width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums;}
+  table.board th{
+    font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted);
+    padding:8px 10px; text-align:left; border-bottom:1px solid var(--line); white-space:nowrap;
+  }
+  table.board td{
+    padding:9px 10px; border-bottom:1px solid rgba(29,66,48,.55); font-size:15px; white-space:nowrap;
+  }
+  table.board tr.leader td{background:rgba(217,182,78,.10);}
+  table.board tr.leader td:first-child{border-left:3px solid var(--gold);}
+  .pos{font-weight:800; color:var(--gold); width:44px;}
+  .pname{font-weight:700; letter-spacing:.04em; text-transform:uppercase;}
+  .under{color:var(--red); font-weight:800;}
+  .over{color:var(--blue);}
+  .even{color:var(--txt);}
+  .dim{color:var(--muted);}
+  .money{color:var(--green); font-weight:700;}
+  .grid18 th, .grid18 td{text-align:center; padding:6px 6px; font-size:13px;}
+  .grid18 td.hole-birdie{color:var(--red); font-weight:800;}
+  .grid18 td.hole-eagle{color:var(--red); font-weight:800; text-decoration:underline;}
+  .grid18 td.hole-bogey{color:var(--blue);}
+  .cardpanel{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    padding:14px 16px; margin-bottom:16px;
+  }
+  .flexrow{display:flex; gap:16px; flex-wrap:wrap;}
+  .flexrow > .cardpanel{flex:1 1 340px; min-width:300px;}
+  input[type=text], input[type=number], input[type=date]{
+    background:#0a1c12; color:var(--txt); border:1px solid var(--line); border-radius:4px;
+    padding:5px 7px; font-size:13px; width:100%;
+  }
+  input.scorecell{width:44px; text-align:center; font-size:15px; padding:6px 2px;}
+  input.scorecell:focus{outline:2px solid var(--gold-dim);}
+  input:disabled{opacity:.45;}
+  .setup-grid{display:grid; grid-template-columns:auto 1fr; gap:8px 12px; align-items:center; font-size:13px;}
+  .setup-grid label{color:var(--muted); font-size:11px; letter-spacing:.12em; text-transform:uppercase; white-space:nowrap;}
+  .toggle{display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:13px;}
+  .banner{
+    background:rgba(217,182,78,.08); border:1px solid var(--gold-dim); border-radius:6px;
+    color:var(--gold); font-size:12px; letter-spacing:.08em; padding:8px 12px; margin-bottom:14px;
+  }
+  .skinwin{color:var(--gold); font-weight:800;}
+  .footer-note{font-size:11px; color:var(--muted); letter-spacing:.06em; margin-top:10px;}
+  .btn{
+    background:var(--panel2); color:var(--txt); border:1px solid var(--line); border-radius:5px;
+    padding:8px 14px; font-size:12px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; cursor:pointer;
+  }
+  .btn:hover{border-color:var(--gold-dim); color:var(--gold);}
+  .btn.danger:hover{border-color:var(--red); color:var(--red);}
+  .teamchip{
+    display:inline-block; background:var(--panel2); border:1px solid var(--line);
+    border-radius:4px; padding:2px 8px; font-size:11px; color:var(--muted); letter-spacing:.08em;
+  }
+  .bignum{font-size:clamp(26px,3.2vw,40px); font-weight:800; color:var(--gold);}
+  @media (max-width:700px){ body{overflow:auto;} main{padding:10px;} }
+</style>
+</head>
+<body>
+<header>
+  <div class="crest">⛳</div>
+  <div class="title">
+    <h1 id="hdrTitle">Old Works Invitational</h1>
+    <div class="sub" id="hdrSub"></div>
+  </div>
+  <div class="purse">
+    <div class="lbl">Total Purse</div>
+    <div class="amt" id="hdrPurse">$0</div>
+  </div>
+</header>
+<nav id="tabs"></nav>
+<main id="view"></main>
+
+<script>
+'use strict';
+/* ================= STATE ================= */
+const LS_KEY = 'owib_dashboard_v1';
+const MAXP = 24;
+
+const DEFAULT_STATE = {
+  eventName: 'The Big Stack Invite',
+  course: {
+    name:'Old Works Golf Course', date:'2026-08-14', tee:'Gold',
+    slope:129, rating:73.8,
+    pars:[4,3,5,4,5,4,5,3,3, 4,3,5,4,4,4,5,4,3],
+    si:  [11,17,3,7,1,5,13,9,15, 8,16,4,12,2,10,6,18,14],
+    yards:[424,334,555,361,570,389,427,388,358, 395,177,409,459,411,202,440,380,390]
+  },
+  buyins: {chicago:20, par3:5, net:5, gross:5, skins:5, scramble:10}, // $40 AM + $10 optional PM scramble
+  players: [], // {name, index}
+  ghost: {enabled:false, hcp:0, mirrorSlot:null},  // mirrorSlot: null = par ghost, else copies that player's card
+  scores: [],  // scores[slot][hole] = int|null
+  scramble: {
+    teeName:'Tips', slope:129, rating:73.8,   // set from the tips card
+    size:4, pcts:'25,20,15,10',               // allowance % applied low-hcp to high
+    assign:{},                                 // slot -> team number override
+    scores:{}                                  // teamNum -> [18 gross]
+  },
+  chicagoAssign:{},   // slot -> chicago team number (empty = pair by roster order)
+  scrambleIn:{},      // slot -> false when a player skips the PM scramble
+  amGroup:{},         // slot -> tee group 1-5
+  teetimes:['7:20','7:30','7:40','7:50','8:10','8:20'],
+  sync:{sheetId:'1r47V-wUcWgEOgjR_UtMaPjErhZX-XMH-9EBz8o-enl4', lastAt:null, err:null},
+  tab: 'leaderboard',
+  auto: false
+};
+
+function freshScores(){ return Array.from({length:MAXP},()=>Array(18).fill(null)); }
+
+let state = load();
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      const s = JSON.parse(raw);
+      if(s && s.course && s.scores){
+        s.auto = false;
+        // migrate pre-scramble saves
+        if(s.buyins.scramble === undefined) s.buyins = JSON.parse(JSON.stringify(DEFAULT_STATE.buyins));
+        if(!s.scramble) s.scramble = JSON.parse(JSON.stringify(DEFAULT_STATE.scramble));
+        if(s.ghost.mirrorSlot === undefined) s.ghost.mirrorSlot = null;
+        if(s.eventName === 'Old Works Invitational') s.eventName = 'The Big Stack Invite';
+        if(!s.chicagoAssign) s.chicagoAssign = {};
+        if(!s.scrambleIn) s.scrambleIn = {};
+        if(!s.amGroup) s.amGroup = {};
+        if(!s.teetimes || s.teetimes.length < 6) s.teetimes = ['7:20','7:30','7:40','7:50','8:10','8:20'];
+        if(!s.sync) s.sync = {sheetId:'', lastAt:null, err:null};
+        if(!s.sync.sheetId) s.sync.sheetId = '1r47V-wUcWgEOgjR_UtMaPjErhZX-XMH-9EBz8o-enl4';
+        while(s.scores.length < MAXP) s.scores.push(Array(18).fill(null));
+        return s;
+      }
+    }
+  }catch(e){}
+  const s = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  s.players = demoRoster();
+  s.scores = freshScores();
+  return s;
+}
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
+
+function demoRoster(){
+  return [
+    {name:'Wes Parkinson',      index:14.2},
+    {name:'Sandy Bunker',       index:8.5},
+    {name:'Mike Shanks',        index:18.6},
+    {name:'Tommy Threeputt',    index:12.0},
+    {name:'Divot Dave Duffer',  index:22.4},
+    {name:'Chip N. Runn',       index:6.8},
+    {name:'Chuck Chunker',      index:16.1},
+    {name:'Lip-Out Larry',      index:10.3},
+    {name:'Gimme Jimmy',        index:9.9},
+    {name:'Snowman Stan',       index:20.5},
+    {name:'Mulligan Murphy',    index:13.4},
+    {name:'Hook McGraw',        index:7.2},
+    {name:'Yippy Gibbs',        index:19.8},
+    {name:'Justin Therough',    index:11.6},
+    {name:'Wormburner Willy',   index:24.1},
+    {name:'Otto B. Better',     index:5.4},
+    {name:'Foot Wedge Fred',    index:17.3},
+    {name:'Frank Wanker',       index:9.1},
+    {name:'Breakfast Ball Bruce', index:15.7},
+    {name:'Shankopotamus Sam',  index:21.2}
+  ];
+}
+
+/* ================= GOLF MATH ================= */
+function courseHcp(index){
+  if(index===null || index===undefined || index==='') return 0;
+  return Math.round(Number(index) * Number(state.course.slope) / 113);
+}
+function strokesOnHole(hcp, si){
+  let s = 0;
+  if(hcp >= si) s++;
+  if(hcp >= si + 18) s++;
+  return s;
+}
+function chicagoPts(net, par){
+  const d = net - par;
+  if(d <= -2) return 5;
+  if(d === -1) return 3;
+  if(d === 0) return 2;
+  if(d === 1) return 1;
+  return 0;
+}
+function activePlayers(){
+  const out = [];
+  state.players.forEach((p, slot)=>{
+    if(p && p.name && p.name.trim() !== '' && slot < MAXP)
+      out.push({slot, name:p.name.trim(), index:Number(p.index)||0, hcp:courseHcp(p.index)});
+  });
+  return out.slice(0, MAXP);
+}
+function ghostActive(){
+  return state.ghost.enabled && activePlayers().length % 2 === 1;
+}
+function ghostTeammate(){
+  // the player left without a partner (who the ghost will join)
+  const ps = activePlayers();
+  if(ps.length % 2 === 0) return null;
+  const byTeam = new Map(); const un = [];
+  ps.forEach(p=>{
+    const t = Number(state.chicagoAssign[p.slot]) || 0;
+    if(t >= 1){ if(!byTeam.has(t)) byTeam.set(t, []); byTeam.get(t).push(p); }
+    else un.push(p);
+  });
+  un.forEach(p=>{
+    let t = 1;
+    while((byTeam.get(t)||[]).length >= 2) t++;
+    if(!byTeam.has(t)) byTeam.set(t, []);
+    byTeam.get(t).push(p);
+  });
+  const solo = [...byTeam.keys()].sort((a,b)=>a-b).find(t=>byTeam.get(t).length===1);
+  return solo === undefined ? null : byTeam.get(solo)[0];
+}
+function ghostMirror(){
+  // the player whose card the ghost replays; must not be the ghost's own teammate
+  const ms = state.ghost.mirrorSlot;
+  if(ms === null || ms === undefined || ms === '') return null;
+  const ps = activePlayers();
+  const src = ps.find(p => p.slot === Number(ms));
+  if(!src) return null;
+  const mate = ghostTeammate();
+  if(mate && mate.slot === src.slot) return null;      // can't team with yourself
+  return src;
+}
+function ghostRow(){
+  const src = ghostMirror();
+  if(src) return {slot:'GHOST', name:'Ghost of '+src.name, index:src.index, hcp:src.hcp, isGhost:true, mirror:src};
+  return {slot:'GHOST', name:'The Ghost', index:null, hcp:Number(state.ghost.hcp)||0, isGhost:true, mirror:null};
+}
+function grossFor(p, h){
+  if(p.isGhost){
+    if(p.mirror) return grossFor(p.mirror, h);         // replay the assigned player's card
+    return state.course.pars[h];                       // par ghost fallback
+  }
+  const v = state.scores[p.slot][h];
+  return (v===null || v==='' || v===undefined) ? null : Number(v);
+}
+function netFor(p, h){
+  const g = grossFor(p, h);
+  if(g===null) return null;
+  return g - strokesOnHole(p.hcp, state.course.si[h]);
+}
+
+function computeAll(){
+  const ps = activePlayers();
+  const pars = state.course.pars;
+
+  // per-player stats
+  const stats = ps.map(p=>{
+    let gross=0, net=0, thru=0, parPlayed=0, p3net=0, p3n=0, chi=0;
+    const holes=[];
+    for(let h=0; h<18; h++){
+      const g = grossFor(p,h), n = netFor(p,h);
+      holes.push({g, n});
+      if(g!==null){
+        gross+=g; net+=n; thru++; parPlayed+=pars[h];
+        chi += chicagoPts(n, pars[h]);
+        if(pars[h]===3){ p3net+=n; p3n++; }
+      }
+    }
+    return {p, holes, gross, net, thru, toPar:gross-parPlayed, netToPar:net-parPlayed,
+            par3Net:p3net, par3Thru:p3n, chi};
+  });
+
+  const par3Count = pars.filter(x=>x===3).length;
+
+  // Chicago teams: explicit assignments win; unassigned players pair up in roster order
+  const withGhost = ghostActive();
+  const byTeam = new Map();
+  const unassigned = [];
+  ps.forEach(p=>{
+    const t = Number(state.chicagoAssign[p.slot]) || 0;
+    if(t >= 1){ if(!byTeam.has(t)) byTeam.set(t, []); byTeam.get(t).push(p); }
+    else unassigned.push(p);
+  });
+  unassigned.forEach(p=>{
+    let t = 1;
+    while((byTeam.get(t)||[]).length >= 2) t++;
+    if(!byTeam.has(t)) byTeam.set(t, []);
+    byTeam.get(t).push(p);
+  });
+  if(withGhost){
+    const solo = [...byTeam.keys()].sort((a,b)=>a-b).find(t=>byTeam.get(t).length===1);
+    if(solo !== undefined) byTeam.get(solo).push(ghostRow());
+  }
+  const teamList = [...byTeam.keys()].sort((a,b)=>a-b)
+    .map(t=>({num:t, a:byTeam.get(t)[0]||null, b:byTeam.get(t)[1]||null}));
+  const ghostStats = withGhost ? (()=> {
+    const p = ghostRow();
+    let chi=0; const holePts=[];
+    for(let h=0;h<18;h++){ const n=netFor(p,h); const pts=chicagoPts(n,pars[h]); chi+=pts; holePts.push(pts); }
+    return {p, chi, holePts};
+  })() : null;
+
+  function statFor(member){
+    if(!member) return null;
+    if(member.isGhost) return ghostStats;
+    return stats.find(s=>s.p.slot===member.slot);
+  }
+  const teams = teamList.map(t=>{
+    const sa = statFor(t.a), sb = statFor(t.b);
+    const pts = (sa?sa.chi:0) + (sb?sb.chi:0);
+    const holePts = Array.from({length:18},(_,h)=>{
+      let v = 0, any=false;
+      [t.a,t.b].forEach(m=>{
+        if(!m) return;
+        if(m.isGhost){ v += ghostStats.holePts[h]; any=true; }
+        else{
+          const n = netFor(m,h);
+          if(n!==null){ v += chicagoPts(n,pars[h]); any=true; }
+        }
+      });
+      return any ? v : null;
+    });
+    return {...t, pts, holePts};
+  });
+
+  // pools (real players only pay)
+  const n = ps.length;
+  const pools = {
+    chicago: state.buyins.chicago * n,
+    par3:    state.buyins.par3 * n,
+    net:     state.buyins.net * n,
+    gross:   state.buyins.gross * n,
+    skins:   state.buyins.skins * n,
+    scramble: 0   // set below — only actual scramble entrants pay
+  };
+
+  // ---- afternoon scramble (from the tips, opt-in) ----
+  const sc = state.scramble;
+  const scPlayers = ps.filter(p => state.scrambleIn[p.slot] !== false);
+  pools.scramble = state.buyins.scramble * scPlayers.length;
+  const scSize = Math.max(2, Number(sc.size)||4);
+  const scHcp = p => Math.round((Number(p.index)||0) * (Number(sc.slope)||113) / 113);
+  const scTeamOf = (p, i) => Number(sc.assign[p.slot]) || Math.ceil((i+1)/scSize);
+  const scTeamNums = [...new Set(scPlayers.map((p,i)=>scTeamOf(p,i)))].sort((a,b)=>a-b);
+  const pcts = String(sc.pcts||'').split(',').map(x=>Number(x.trim())).filter(x=>!isNaN(x));
+  const scTeams = scTeamNums.map(tn=>{
+    const members = scPlayers.filter((p,i)=>scTeamOf(p,i)===tn)
+                      .map(p=>({...p, sHcp:scHcp(p)}))
+                      .sort((a,b)=>a.sHcp-b.sHcp);
+    const teamHcp = Math.round(members.reduce((sum,m,j)=>sum + m.sHcp * ((pcts[j]||0)/100), 0));
+    const sScores = (sc.scores[tn]||Array(18).fill(null));
+    let gross=0, thru=0, parPlayed=0;
+    for(let h=0;h<18;h++){
+      const v=sScores[h];
+      if(v!==null && v!=='' && v!==undefined){ gross+=Number(v); thru++; parPlayed+=pars[h]; }
+    }
+    return {num:tn, members, teamHcp, scores:sScores, gross, thru,
+            toPar:gross-parPlayed, net: thru===18 ? gross-teamHcp : null};
+  });
+  const scDone = scTeams.filter(t=>t.thru===18);
+  let scW = {winners:[], best:null};
+  if(scDone.length){
+    const best = Math.min(...scDone.map(t=>t.net));
+    scW = {winners:scDone.filter(t=>t.net===best), best};
+  }
+
+  // skins: outright low NET per hole, real players only
+  const skins = [];
+  for(let h=0; h<18; h++){
+    const entries = stats.filter(s=>s.holes[h].g!==null);
+    if(entries.length===0){ skins.push({hole:h, state:'open'}); continue; }
+    let min = Math.min(...entries.map(s=>s.holes[h].n));
+    const winners = entries.filter(s=>s.holes[h].n===min);
+    if(winners.length===1) skins.push({hole:h, state:'won', winner:winners[0].p, net:min});
+    else skins.push({hole:h, state:'tie', net:min, count:winners.length});
+  }
+  const skinsWon = skins.filter(s=>s.state==='won');
+  const skinValue = skinsWon.length ? pools.skins / skinsWon.length : 0;
+
+  // winners (complete cards only for gross/net/par3; chicago all-holes-in)
+  const finished = stats.filter(s=>s.thru===18);
+  function lowSplit(list, key){
+    if(!list.length) return {winners:[], best:null};
+    const best = Math.min(...list.map(s=>s[key]));
+    return {winners:list.filter(s=>s[key]===best), best};
+  }
+  const grossW = lowSplit(finished, 'gross');
+  const netW   = lowSplit(finished, 'net');
+  const p3done = stats.filter(s=>s.par3Thru===par3Count);
+  const par3W  = lowSplit(p3done, 'par3Net');
+  const allDone = ps.length>0 && finished.length===ps.length;
+  let chiW = {winners:[], best:null};
+  if(teams.length){
+    const best = Math.max(...teams.map(t=>t.pts));
+    chiW = {winners:teams.filter(t=>t.pts===best), best};
+  }
+
+  // money list
+  const money = new Map(); ps.forEach(p=>money.set(p.slot, 0));
+  const add=(slot,amt)=>money.set(slot,(money.get(slot)||0)+amt);
+  grossW.winners.forEach(s=>add(s.p.slot, pools.gross/grossW.winners.length));
+  netW.winners.forEach(s=>add(s.p.slot, pools.net/netW.winners.length));
+  par3W.winners.forEach(s=>add(s.p.slot, pools.par3/par3W.winners.length));
+  skinsWon.forEach(s=>add(s.winner.slot, skinValue));
+  if(chiW.winners.length){
+    const perTeam = pools.chicago / chiW.winners.length;
+    chiW.winners.forEach(t=>{
+      const real = [t.a,t.b].filter(m=>m && !m.isGhost);
+      real.forEach(m=>add(m.slot, perTeam/real.length));
+    });
+  }
+  if(scW.winners.length){
+    const perTeam = pools.scramble / scW.winners.length;
+    scW.winners.forEach(t=> t.members.forEach(m=>add(m.slot, perTeam/t.members.length)));
+  }
+
+  return {stats, teams, pools, skins, skinsWon, skinValue,
+          grossW, netW, par3W, chiW, par3Count, allDone, money, withGhost,
+          scTeams, scW, scSize};
+}
+
+/* ================= FORMAT HELPERS ================= */
+const fmt$ = v => '$' + (Math.round(v*100)/100).toLocaleString(undefined,{maximumFractionDigits:2});
+function fmtPar(d, played){
+  if(!played) return '<span class="dim">—</span>';
+  if(d < 0) return `<span class="under">${d}</span>`;
+  if(d === 0) return `<span class="even">E</span>`;
+  return `<span class="over">+${d}</span>`;
+}
+function rankRows(rows, valFn, asc=true){
+  const sorted=[...rows].sort((a,b)=> asc? valFn(a)-valFn(b) : valFn(b)-valFn(a));
+  let lastVal=null, lastRank=0;
+  return sorted.map((r,i)=>{
+    const v=valFn(r);
+    const rank = (v===lastVal)? lastRank : i+1;
+    lastVal=v; lastRank=rank;
+    const tied = sorted.filter(x=>valFn(x)===v).length>1;
+    return {row:r, rank, label:(tied?'T':'')+rank};
+  });
+}
+const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ================= RENDER ================= */
+const TABS = [
+  ['leaderboard','Leaderboard'], ['chicago','Chicago'], ['skins','Skins'],
+  ['par3','Par 3'], ['scramble','Scramble'], ['groups','Groups'], ['payouts','Payouts'],
+  ['scores','Enter Scores'], ['setup','Setup'], ['sync','Sync']
+];
+let autoTimer = null;
+
+function render(){
+  renderHeader();
+  renderTabs();
+  const R = computeAll();
+  const v = document.getElementById('view');
+  switch(state.tab){
+    case 'leaderboard': v.innerHTML = viewLeaderboard(R); break;
+    case 'chicago':     v.innerHTML = viewChicago(R); break;
+    case 'skins':       v.innerHTML = viewSkins(R); break;
+    case 'par3':        v.innerHTML = viewPar3(R); break;
+    case 'scramble':    v.innerHTML = viewScramble(R); wireScramble(); break;
+    case 'groups':      v.innerHTML = viewGroups(R); break;
+    case 'sync':        v.innerHTML = viewSync(R); wireSync(); break;
+    case 'payouts':     v.innerHTML = viewPayouts(R); break;
+    case 'scores':      v.innerHTML = viewScores(R); wireScoreInputs(); break;
+    case 'setup':       v.innerHTML = viewSetup(R); wireSetup(); break;
+  }
+  save();
+}
+function renderHeader(){
+  const c = state.course;
+  document.getElementById('hdrTitle').textContent = state.eventName;
+  document.getElementById('hdrSub').textContent =
+    `${c.name} · ${c.tee} Tees · Slope ${c.slope} / Rating ${c.rating} · ${c.date}`;
+  const n = activePlayers().length;
+  const total = Object.values(state.buyins).reduce((a,b)=>a+Number(b||0),0) * n;
+  document.getElementById('hdrPurse').textContent = fmt$(total);
+}
+function renderTabs(){
+  const nav = document.getElementById('tabs');
+  nav.innerHTML = TABS.map(([id,lbl])=>
+    `<button class="${state.tab===id?'active':''}" onclick="setTab('${id}')">${lbl}</button>`).join('')
+    + `<span class="spacer"></span>
+       <button class="util" onclick="toggleAuto()">${state.auto?'📺 Auto: ON':'📺 Auto'}</button>
+       <button class="util" onclick="simulateScores()">🎲 Simulate</button>
+       <button class="util danger" onclick="clearScores()">Clear Scores</button>`;
+}
+function setTab(t){ state.tab=t; render(); }
+function toggleAuto(){
+  state.auto = !state.auto;
+  if(autoTimer){ clearInterval(autoTimer); autoTimer=null; }
+  if(state.auto){
+    const cyc = ['leaderboard','chicago','skins','par3','payouts'];
+    autoTimer = setInterval(()=>{
+      const i = cyc.indexOf(state.tab);
+      state.tab = cyc[(i+1) % cyc.length];
+      render();
+    }, 12000);
+  }
+  render();
+}
+
+/* ---------- views ---------- */
+function viewLeaderboard(R){
+  const started = R.stats.filter(s=>s.thru>0);
+  const idle = R.stats.filter(s=>s.thru===0);
+  const ranked = rankRows(started, s=>s.netToPar, true);
+  let rows = ranked.map(({row:s, label}, i)=>`
+    <tr class="${i===0?'leader':''}">
+      <td class="pos">${label}</td>
+      <td class="pname">${esc(s.p.name)}</td>
+      <td class="dim">${s.p.hcp}</td>
+      <td>${fmtPar(s.netToPar, true)}</td>
+      <td>${s.net}</td>
+      <td>${fmtPar(s.toPar, true)}</td>
+      <td>${s.gross}</td>
+      <td class="dim">${s.thru===18?'F':s.thru}</td>
+    </tr>`).join('');
+  rows += idle.map(s=>`
+    <tr><td class="pos dim">—</td><td class="pname dim">${esc(s.p.name)}</td>
+    <td class="dim">${s.p.hcp}</td><td class="dim">—</td><td class="dim">—</td>
+    <td class="dim">—</td><td class="dim">—</td><td class="dim">0</td></tr>`).join('');
+  return `<h2 class="section">Official Leaderboard — Net</h2>
+    <div class="boardwrap"><table class="board">
+      <tr><th>Pos</th><th>Player</th><th>Hcp</th><th>Net To Par</th><th>Net</th>
+          <th>Gross To Par</th><th>Gross</th><th>Thru</th></tr>
+      ${rows || '<tr><td colspan="8" class="dim">No players yet — hit Setup.</td></tr>'}
+    </table></div>
+    <div class="footer-note">Sorted by net to par. Gross & Net pools pay on completed 18-hole cards.</div>`;
+}
+
+function viewChicago(R){
+  const ranked = rankRows(R.teams, t=>t.pts, false);
+  const holes = Array.from({length:18},(_,i)=>i);
+  const rows = ranked.map(({row:t, label}, i)=>{
+    const names = [t.a,t.b].filter(Boolean).map(m=>m.isGhost?'👻 Ghost':esc(m.name)).join(' / ') || '—';
+    return `<tr class="${i===0?'leader':''}">
+      <td class="pos">${label}</td>
+      <td><span class="teamchip">T${t.num}</span></td>
+      <td class="pname">${names}</td>
+      <td class="bignum" style="font-size:18px">${t.pts}</td>
+      ${holes.map(h=>`<td class="dim">${t.holePts[h]===null?'·':t.holePts[h]}</td>`).join('')}
+    </tr>`;
+  }).join('');
+  return `<h2 class="section">Chicago — Two-Man Teams</h2>
+    <div class="banner">Points on NET score: Eagle 5 · Birdie 3 · Par 2 · Bogey 1 · Double+ 0
+      ${R.withGhost? ' — 👻 Ghost fills the odd seat and makes par on every hole.':''}</div>
+    <div class="boardwrap"><table class="board grid18">
+      <tr><th>Pos</th><th></th><th style="text-align:left">Team</th><th>Pts</th>
+        ${holes.map(h=>`<th>${h+1}</th>`).join('')}</tr>
+      ${rows || '<tr><td class="dim">No teams yet.</td></tr>'}
+    </table></div>
+    <div class="footer-note">Pool: ${fmt$(R.pools.chicago)} to the winning team${R.chiW.winners.length>1?' (currently tied — pool splits)':''}.</div>`;
+}
+
+function viewSkins(R){
+  const rows = R.skins.map(s=>{
+    const holeN = s.hole+1, par = state.course.pars[s.hole];
+    let res, pay='';
+    if(s.state==='open'){ res = '<span class="dim">—</span>'; }
+    else if(s.state==='tie'){ res = `<span class="dim">Push (${s.count} tied @ ${s.net})</span>`; }
+    else { res = `<span class="skinwin">${esc(s.winner.name)}</span> <span class="dim">(net ${s.net})</span>`;
+           pay = `<span class="money">${fmt$(R.skinValue)}</span>`; }
+    return `<tr><td class="pos">${holeN}</td><td class="dim">Par ${par}</td><td>${res}</td><td>${pay}</td></tr>`;
+  }).join('');
+  return `<h2 class="section">Skins — Outright Low Net</h2>
+    <div class="flexrow">
+      <div class="cardpanel" style="flex:2 1 480px">
+        <div class="boardwrap"><table class="board">
+          <tr><th>Hole</th><th>Par</th><th>Result</th><th>Payout</th></tr>${rows}
+        </table></div>
+      </div>
+      <div class="cardpanel" style="flex:1 1 260px">
+        <div class="dim" style="font-size:11px;letter-spacing:.2em;text-transform:uppercase">Skins Pool</div>
+        <div class="bignum">${fmt$(R.pools.skins)}</div>
+        <div style="margin-top:10px" class="dim">Skins won: <b style="color:var(--txt)">${R.skinsWon.length}</b></div>
+        <div class="dim">Value per skin: <b class="money">${R.skinsWon.length?fmt$(R.skinValue):'—'}</b></div>
+        <div class="footer-note">Ties push — no carryover. Pool splits evenly across all skins won. Ghost never wins a skin.</div>
+      </div>
+    </div>`;
+}
+
+function viewPar3(R){
+  const elig = R.stats.filter(s=>s.par3Thru>0);
+  const ranked = rankRows(elig, s=>s.par3Net + (s.par3Thru<R.par3Count? 900:0), true);
+  const rows = ranked.map(({row:s,label},i)=>`
+    <tr class="${i===0 && s.par3Thru===R.par3Count?'leader':''}">
+      <td class="pos">${s.par3Thru===R.par3Count?label:'<span class="dim">·</span>'}</td>
+      <td class="pname">${esc(s.p.name)}</td>
+      <td>${s.par3Net}</td>
+      <td>${fmtPar(s.par3Net - 3*s.par3Thru, s.par3Thru>0)}</td>
+      <td class="dim">${s.par3Thru}/${R.par3Count}</td>
+    </tr>`).join('');
+  return `<h2 class="section">Par 3 Contest — Combined Net</h2>
+    <div class="boardwrap"><table class="board">
+      <tr><th>Pos</th><th>Player</th><th>Net Total</th><th>vs Par</th><th>Par 3s Played</th></tr>
+      ${rows || '<tr><td colspan="5" class="dim">No par-3 scores yet.</td></tr>'}
+    </table></div>
+    <div class="footer-note">Pool: ${fmt$(R.pools.par3)}. Official once all ${R.par3Count} par-3s are in. Ranks show for completed cards.</div>`;
+}
+
+function viewScramble(R){
+  const sc = state.scramble;
+  const pars = state.course.pars;
+  const holes = Array.from({length:18},(_,i)=>i);
+  const ps = activePlayers();
+
+  const assignRows = ps.map((p,i)=>{
+    const isIn = state.scrambleIn[p.slot] !== false;
+    const cur = Number(sc.assign[p.slot]) || Math.ceil((i+1)/R.scSize);
+    const opts = Array.from({length:Math.max(1,Math.ceil(ps.length/2))},(_,t)=>t+1)
+      .map(t=>`<option value="${t}" ${t===cur?'selected':''}>Team ${t}</option>`).join('');
+    return `<tr style="${isIn?'':'opacity:.4'}">
+      <td><input type="checkbox" data-scin="${p.slot}" ${isIn?'checked':''}></td>
+      <td class="pname">${esc(p.name)}</td>
+      <td class="dim" style="text-align:center">${Math.round((Number(p.index)||0)*(Number(sc.slope)||113)/113)}</td>
+      <td>${isIn?`<select data-scassign="${p.slot}" style="background:#0a1c12;color:var(--txt);border:1px solid var(--line);border-radius:4px;padding:4px">${opts}</select>`:'<span class="dim">out</span>'}</td></tr>`;
+  }).join('');
+
+  const entryRows = R.scTeams.map(t=>{
+    const cells = holes.map(h=>{
+      const v = t.scores[h];
+      return `<td><input class="scorecell" type="number" min="1" max="20"
+        value="${v===null||v===undefined?'':v}" data-scteam="${t.num}" data-h="${h}"></td>`;
+    }).join('');
+    return `<tr><td class="pname" style="position:sticky;left:0;background:var(--panel)">Team ${t.num} <span class="dim">(hcp ${t.teamHcp})</span></td>${cells}<td><b>${t.thru?t.gross:''}</b></td></tr>`;
+  }).join('');
+
+  const ranked = rankRows(R.scTeams.filter(t=>t.thru>0),
+    t=> (t.net!==null ? t.net : 900+t.toPar), true);
+  const standRows = ranked.map(({row:t,label},i)=>`
+    <tr class="${i===0 && t.thru===18?'leader':''}">
+      <td class="pos">${t.thru===18?label:'<span class="dim">·</span>'}</td>
+      <td><span class="teamchip">T${t.num}</span></td>
+      <td class="pname">${t.members.map(m=>esc(m.name.split(' ')[0])).join(' · ')}</td>
+      <td class="dim">${t.teamHcp}</td>
+      <td>${t.thru?t.gross:'—'}</td>
+      <td>${t.net!==null?`<b>${t.net}</b>`:'<span class="dim">—</span>'}</td>
+      <td>${t.net!==null?fmtPar(t.net-state.course.pars.reduce((a,b)=>a+b,0),true):fmtPar(t.toPar,t.thru>0)}</td>
+      <td class="dim">${t.thru===18?'F':t.thru}</td>
+    </tr>`).join('');
+
+  return `<h2 class="section">Afternoon Scramble — ${esc(sc.teeName)} Tees</h2>
+    <div class="banner">Team handicap = ${esc(sc.pcts)}% of members' course handicaps (low to high), computed at ${esc(sc.teeName)} slope ${sc.slope}. One gross score per team per hole. Pool: ${fmt$(R.pools.scramble)} to the winning team.</div>
+    <div class="flexrow">
+      <div class="cardpanel" style="flex:1 1 300px">
+        <h2 class="section">Scramble Setup</h2>
+        <div class="setup-grid">
+          <label>Tee Name</label><input type="text" id="scTee" value="${esc(sc.teeName)}">
+          <label>Slope (tips)</label><input type="number" id="scSlope" value="${sc.slope}">
+          <label>Rating (tips)</label><input type="number" step="0.1" id="scRating" value="${sc.rating}">
+          <label>Players / Team</label><input type="number" id="scSize" min="2" max="6" value="${sc.size}">
+          <label>Allowance %</label><input type="text" id="scPcts" value="${esc(sc.pcts)}">
+        </div>
+        <div class="footer-note">Enter slope/rating off the tips scorecard. Allowance %s apply to sorted handicaps (best player first). USGA standard: 25,20,15,10 for 4-man; 35,15 for 2-man.</div>
+      </div>
+      <div class="cardpanel" style="flex:1 1 300px">
+        <h2 class="section">Team Assignment</h2>
+        <div class="boardwrap" style="max-height:40vh;overflow:auto">
+        <table class="board"><tr><th>In</th><th>Player</th><th>Tips Hcp</th><th>Scramble Team</th></tr>${assignRows}</table>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn" onclick="scrambleSerpentine()">🐍 Serpentine Draft</button>
+          <button class="btn" onclick="scrambleRandom()">🎩 Random Teams</button>
+        </div>
+        <div class="footer-note">Serpentine snakes through the handicap ranking so every team gets an A, B, C and D player. Uncheck "In" for anyone skipping the scramble — the pool only counts entrants.</div>
+      </div>
+    </div>
+    <div class="cardpanel">
+      <h2 class="section">Standings</h2>
+      <div class="boardwrap"><table class="board">
+        <tr><th>Pos</th><th></th><th>Team</th><th>Hcp</th><th>Gross</th><th>Net</th><th>To Par</th><th>Thru</th></tr>
+        ${standRows || '<tr><td colspan="8" class="dim">No scramble scores yet.</td></tr>'}
+      </table></div>
+    </div>
+    <div class="cardpanel">
+      <h2 class="section">Team Score Entry — Gross</h2>
+      <div class="boardwrap"><table class="board grid18">
+        <tr><th style="text-align:left;position:sticky;left:0;background:var(--bg)">Team (Hcp)</th>
+        ${holes.map(h=>`<th>${h+1}<div class="dim" style="font-size:9px">P${pars[h]}</div></th>`).join('')}<th>Gross</th></tr>
+        ${entryRows}
+      </table></div>
+    </div>`;
+}
+function wireScramble(){
+  const bind=(id,fn)=>{ const el=document.getElementById(id); if(el) el.addEventListener('change',e=>{fn(e.target); render();}); };
+  bind('scTee',   t=>state.scramble.teeName=t.value);
+  bind('scSlope', t=>state.scramble.slope=Number(t.value)||113);
+  bind('scRating',t=>state.scramble.rating=Number(t.value)||72);
+  bind('scSize',  t=>state.scramble.size=Math.max(2,Number(t.value)||4));
+  bind('scPcts',  t=>state.scramble.pcts=t.value);
+  document.querySelectorAll('[data-scin]').forEach(cb=>{
+    cb.addEventListener('change', e=>{
+      state.scrambleIn[e.target.dataset.scin] = e.target.checked ? true : false;
+      render();
+    });
+  });
+  document.querySelectorAll('[data-scassign]').forEach(sel=>{
+    sel.addEventListener('change', e=>{
+      state.scramble.assign[e.target.dataset.scassign] = Number(e.target.value);
+      render();
+    });
+  });
+  document.querySelectorAll('[data-scteam]').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const tn=e.target.dataset.scteam, h=+e.target.dataset.h;
+      if(!state.scramble.scores[tn]) state.scramble.scores[tn]=Array(18).fill(null);
+      const v=e.target.value;
+      state.scramble.scores[tn][h] = (v==='')? null : Math.max(1, Math.min(20, parseInt(v)||1));
+      save();
+    });
+    inp.addEventListener('change', ()=>render());
+    inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); render(); } });
+  });
+}
+
+function viewPayouts(R){
+  const entries = [...R.money.entries()].filter(([,v])=>v>0);
+  const byMoney = entries.map(([slot,v])=>({name:activePlayers().find(p=>p.slot===slot)?.name||'?', v}))
+                         .sort((a,b)=>b.v-a.v);
+  const gW = R.grossW.winners.map(s=>esc(s.p.name)).join(', ') || 'TBD';
+  const nW = R.netW.winners.map(s=>esc(s.p.name)).join(', ') || 'TBD';
+  const pW = R.par3W.winners.map(s=>esc(s.p.name)).join(', ') || 'TBD';
+  const cW = R.chiW.winners.map(t=>[t.a,t.b].filter(Boolean).map(m=>m.isGhost?'👻':esc(m.name)).join(' / ')).join(' , ') || 'TBD';
+  return `<h2 class="section">Purse & Payouts</h2>
+    ${R.allDone ? '' : '<div class="banner">Unofficial — not all cards are complete.</div>'}
+    <div class="flexrow">
+      <div class="cardpanel">
+        <div class="boardwrap"><table class="board">
+          <tr><th>Game</th><th>Pool</th><th>Leader / Winner</th></tr>
+          <tr><td>Chicago</td><td>${fmt$(R.pools.chicago)}</td><td>${cW} ${R.chiW.best!==null?`<span class="dim">(${R.chiW.best} pts)</span>`:''}</td></tr>
+          <tr><td>Gross</td><td>${fmt$(R.pools.gross)}</td><td>${gW} ${R.grossW.best!==null?`<span class="dim">(${R.grossW.best})</span>`:''}</td></tr>
+          <tr><td>Net</td><td>${fmt$(R.pools.net)}</td><td>${nW} ${R.netW.best!==null?`<span class="dim">(${R.netW.best})</span>`:''}</td></tr>
+          <tr><td>Par 3</td><td>${fmt$(R.pools.par3)}</td><td>${pW} ${R.par3W.best!==null?`<span class="dim">(${R.par3W.best})</span>`:''}</td></tr>
+          <tr><td>Skins</td><td>${fmt$(R.pools.skins)}</td><td>${R.skinsWon.length} skins @ ${R.skinsWon.length?fmt$(R.skinValue):'—'}</td></tr>
+          <tr><td>Scramble (PM)</td><td>${fmt$(R.pools.scramble)}</td><td>${
+            R.scW.winners.length
+              ? R.scW.winners.map(t=>'Team '+t.num).join(', ') + ` <span class="dim">(net ${R.scW.best} — ${fmt$(R.pools.scramble/R.scW.winners.length/(R.scW.winners[0].members.length||1))}/player)</span>`
+              : 'TBD'}</td></tr>
+        </table></div>
+        <div class="footer-note">Buy-in ${fmt$(Object.values(state.buyins).reduce((a,b)=>a+Number(b||0),0))}/player — ${fmt$(state.buyins.scramble)} of it reserved for the afternoon scramble.</div>
+      </div>
+      <div class="cardpanel">
+        <div class="dim" style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Money List</div>
+        <div class="boardwrap"><table class="board">
+          <tr><th>Player</th><th>Winnings</th></tr>
+          ${byMoney.map(m=>`<tr><td class="pname">${esc(m.name)}</td><td class="money">${fmt$(m.v)}</td></tr>`).join('')
+            || '<tr><td colspan="2" class="dim">Nothing decided yet.</td></tr>'}
+        </table></div>
+      </div>
+    </div>`;
+}
+
+function viewScores(R){
+  const ps = activePlayers();
+  const pars = state.course.pars, si = state.course.si;
+  const head = Array.from({length:18},(_,h)=>`<th>${h+1}<div class="dim" style="font-size:9px">P${pars[h]}·S${si[h]}</div></th>`).join('');
+  const rows = ps.map(p=>{
+    const s = R.stats.find(x=>x.p.slot===p.slot);
+    const cells = Array.from({length:18},(_,h)=>{
+      const v = state.scores[p.slot][h];
+      return `<td><input class="scorecell" type="number" min="1" max="15" ${state.sync.sheetId?'disabled':''}
+        value="${v===null?'':v}" data-slot="${p.slot}" data-hole="${h}"></td>`;
+    }).join('');
+    return `<tr>
+      <td class="pname" style="position:sticky;left:0;background:var(--panel)">${esc(p.name)} <span class="dim">(${p.hcp})</span></td>
+      ${cells}<td><b>${s.thru? s.gross : ''}</b></td><td>${s.thru? s.net : ''}</td></tr>`;
+  }).join('');
+  const ghostNote = ghostActive()
+    ? `<div class="banner">👻 Ghost is live — ${(()=>{const g=ghostRow();
+        return g.mirror ? `replaying ${esc(g.mirror.name)}'s card (hcp ${g.mirror.hcp})` :
+        `makes par on every hole, course handicap ${Number(state.ghost.hcp)||0}`;})()} — teamed with ${esc((ghostTeammate()||{name:'?'}).name)}.</div>` : '';
+  return `<h2 class="section">Score Entry — Gross Strokes</h2>${ghostNote}
+    <div class="boardwrap" style="max-height:70vh;overflow:auto">
+      <table class="board grid18">
+      <tr><th style="text-align:left;position:sticky;left:0;background:var(--bg)">Player (Hcp)</th>${head}<th>Gross</th><th>Net</th></tr>
+      ${rows || '<tr><td class="dim">Add players in Setup first.</td></tr>'}
+    </table></div>
+    <div class="footer-note">Tab/arrow through cells. Everything recalculates and auto-saves on every keystroke.</div>`;
+}
+function wireScoreInputs(){
+  document.querySelectorAll('input.scorecell').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const slot=+e.target.dataset.slot, hole=+e.target.dataset.hole;
+      const v = e.target.value;
+      state.scores[slot][hole] = (v==='')? null : Math.max(1, Math.min(15, parseInt(v)||1));
+      save(); renderHeader();
+    });
+    inp.addEventListener('change', ()=>render());
+    inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); render(); } });
+  });
+}
+
+function viewSetup(R){
+  const c = state.course;
+  const rosterRows = Array.from({length:MAXP},(_,i)=>{
+    const p = state.players[i] || {name:'', index:''};
+    const hcp = (p.name && p.name.trim()) ? courseHcp(p.index) : '';
+    return `<tr>
+      <td class="dim">${i+1}</td>
+      <td><input type="text" data-ros="name" data-i="${i}" value="${esc(p.name||'')}" placeholder="—"></td>
+      <td><input type="number" step="0.1" data-ros="index" data-i="${i}" value="${p.index===''||p.index===undefined?'':p.index}" style="width:80px"></td>
+      <td class="dim" style="text-align:center">${hcp}</td>
+    </tr>`;
+  }).join('');
+  const holes = Array.from({length:18},(_,h)=>h);
+  const teamPrev = R.teams.map(t=>{
+    const names=[t.a,t.b].filter(Boolean).map(m=>m.isGhost?'👻 Ghost':esc(m.name)).join(' + ') || '—';
+    return `<span class="teamchip" style="margin:2px">T${t.num}: ${names}</span>`;
+  }).join(' ');
+  return `<h2 class="section">Event Setup</h2>
+  <div class="flexrow">
+    <div class="cardpanel">
+      <div class="setup-grid">
+        <label>Event Name</label><input type="text" id="suEvent" value="${esc(state.eventName)}">
+        <label>Course</label><input type="text" id="suCourse" value="${esc(c.name)}">
+        <label>Date</label><input type="date" id="suDate" value="${c.date}">
+        <label>Tees</label><input type="text" id="suTee" value="${esc(c.tee)}">
+        <label>Slope</label><input type="number" id="suSlope" value="${c.slope}">
+        <label>Rating</label><input type="number" step="0.1" id="suRating" value="${c.rating}">
+      </div>
+      <h2 class="section" style="margin-top:18px">Buy-Ins ($/player)</h2>
+      <div class="setup-grid">
+        <label>Chicago</label><input type="number" id="suBchicago" value="${state.buyins.chicago}">
+        <label>Par 3</label><input type="number" id="suBpar3" value="${state.buyins.par3}">
+        <label>Net</label><input type="number" id="suBnet" value="${state.buyins.net}">
+        <label>Gross</label><input type="number" id="suBgross" value="${state.buyins.gross}">
+        <label>Skins</label><input type="number" id="suBskins" value="${state.buyins.skins}">
+        <label>Scramble (PM)</label><input type="number" id="suBscramble" value="${state.buyins.scramble}">
+      </div>
+      <div class="footer-note">Total: ${fmt$(Object.values(state.buyins).reduce((a,b)=>a+Number(b||0),0))}/player.</div>
+      <h2 class="section" style="margin-top:18px">Ghost</h2>
+      <label class="toggle"><input type="checkbox" id="suGhost" ${state.ghost.enabled?'checked':''}>
+        Enable ghost (fills the odd seat in the Chicago)</label>
+      <div class="setup-grid" style="margin-top:8px">
+        <label>Ghost Card</label>
+        <select id="suGhostMirror" style="background:#0a1c12;color:var(--txt);border:1px solid var(--line);border-radius:4px;padding:5px">
+          <option value="" ${state.ghost.mirrorSlot===null?'selected':''}>— Par every hole (neutral) —</option>
+          ${(()=>{const aps=activePlayers(); const odd=aps.length%2===1?aps[aps.length-1]:null;
+            return aps.filter(p=>!odd || p.slot!==odd.slot)
+              .map(p=>`<option value="${p.slot}" ${state.ghost.mirrorSlot===p.slot?'selected':''}>Mirror ${esc(p.name)}'s card</option>`).join('');})()}
+        </select>
+        <label>Par-Ghost Hcp</label><input type="number" id="suGhostHcp" value="${state.ghost.hcp}">
+      </div>
+      <div class="footer-note">Ghost only activates with an odd player count, pays no buy-in, and can't win skins or individual pools.
+        <b>Mirror mode:</b> the ghost replays the chosen player's live card (scores AND handicap) as the odd player's partner — a player can't be mirrored onto their own team, so the odd player is excluded from the list.
+        <b>Par mode:</b> hcp 0 = exactly par, 2 Chicago pts every hole (neutral); raising it stacks net birdies — use with care.</div>
+    </div>
+    <div class="cardpanel">
+      <h2 class="section">Roster (up to 24 — pairs by order unless assigned)</h2>
+      <div class="boardwrap" style="max-height:46vh;overflow:auto">
+      <table class="board"><tr><th>#</th><th>Player</th><th>GHIN Index</th><th>Course Hcp</th></tr>${rosterRows}</table>
+      </div>
+      <div style="margin-top:10px">${teamPrev}</div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn" onclick="pairChicagoBalanced()">⚖ Pair Balanced</button>
+        <button class="btn" onclick="pairChicagoRandom()">🎩 Pair Random Draw</button>
+        <button class="btn" onclick="copyAssignments()">📋 Copy Teams for Sheet</button>
+      </div>
+      <div class="footer-note">Balanced pairs best hcp with worst (1&20, 2&19…). Random is a hat draw — click again to re-draw. Copy pastes name/index/team columns straight into the Sheet's ROSTER tab.</div>
+    </div>
+  </div>
+  <div class="cardpanel">
+    <h2 class="section">Course Card</h2>
+    <div class="boardwrap"><table class="board grid18">
+      <tr><th style="text-align:left">Hole</th>${holes.map(h=>`<th>${h+1}</th>`).join('')}<th>Tot</th></tr>
+      <tr><td class="dim">Par</td>${holes.map(h=>`<td><input class="scorecell" type="number" min="3" max="6" data-crs="pars" data-h="${h}" value="${c.pars[h]}"></td>`).join('')}<td><b>${c.pars.reduce((a,b)=>a+b,0)}</b></td></tr>
+      <tr><td class="dim">Stroke Idx</td>${holes.map(h=>`<td><input class="scorecell" type="number" min="1" max="18" data-crs="si" data-h="${h}" value="${c.si[h]}"></td>`).join('')}<td></td></tr>
+      <tr><td class="dim">Yards</td>${holes.map(h=>`<td><input class="scorecell" style="width:52px" type="number" data-crs="yards" data-h="${h}" value="${c.yards[h]}"></td>`).join('')}<td><b>${c.yards.reduce((a,b)=>a+b,0)}</b></td></tr>
+    </table></div>
+    <div class="footer-note">Par-3 holes are detected automatically for the Par 3 contest. Course handicap = round(index × slope ÷ 113).</div>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:6px">
+    <button class="btn" onclick="loadDemoRoster()">Load Demo Roster (10)</button>
+    <button class="btn" onclick="exportCSV()">Export CSV</button>
+    <button class="btn danger" onclick="fullReset()">Full Reset</button>
+  </div>`;
+}
+function wireSetup(){
+  const bind=(id,fn)=>{ const el=document.getElementById(id); if(el) el.addEventListener('change',e=>{fn(e.target); render();}); };
+  bind('suEvent', t=>state.eventName=t.value);
+  bind('suCourse',t=>state.course.name=t.value);
+  bind('suDate',  t=>state.course.date=t.value);
+  bind('suTee',   t=>state.course.tee=t.value);
+  bind('suSlope', t=>state.course.slope=Number(t.value)||113);
+  bind('suRating',t=>state.course.rating=Number(t.value)||72);
+  ['chicago','par3','net','gross','skins','scramble'].forEach(k=>
+    bind('suB'+k, t=>state.buyins[k]=Number(t.value)||0));
+  bind('suGhost',   t=>state.ghost.enabled=t.checked);
+  bind('suGhostHcp',t=>state.ghost.hcp=Number(t.value)||0);
+  bind('suGhostMirror', t=>state.ghost.mirrorSlot = t.value===''? null : Number(t.value));
+  document.querySelectorAll('[data-ros]').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      const i=+e.target.dataset.i, k=e.target.dataset.ros;
+      if(!state.players[i]) state.players[i]={name:'',index:''};
+      state.players[i][k] = k==='index' ? (e.target.value===''?'':Number(e.target.value)) : e.target.value;
+      render();
+    });
+  });
+  document.querySelectorAll('[data-crs]').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      const h=+e.target.dataset.h, k=e.target.dataset.crs;
+      state.course[k][h]=Number(e.target.value)||state.course[k][h];
+      render();
+    });
+  });
+}
+
+/* ================= GROUPS VIEW ================= */
+function viewGroups(R){
+  const ps = activePlayers();
+  const groups = new Map();
+  ps.forEach((p,i)=>{
+    const g = Number(state.amGroup[p.slot]) || Math.ceil((i+1)/4);
+    if(!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(p);
+  });
+  const cards = [...groups.keys()].sort((a,b)=>a-b).map(g=>{
+    const t = state.teetimes[g-1] || '—';
+    const members = groups.get(g).map(p=>{
+      const team = Number(state.chicagoAssign[p.slot]) || '';
+      return `<tr><td class="pname">${esc(p.name)}</td><td class="dim">${p.hcp}</td>
+        <td><span class="teamchip">${team?('T'+team):'—'}</span></td></tr>`;
+    }).join('');
+    return `<div class="cardpanel" style="flex:1 1 240px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span style="color:var(--gold-l,#de9c5c);font-weight:800;letter-spacing:.12em">GROUP ${g}</span>
+        <span class="bignum" style="font-size:24px">${t}</span>
+      </div>
+      <table class="board" style="margin-top:8px">
+        <tr><th>Player</th><th>Hcp</th><th>Chi Team</th></tr>${members}</table>
+    </div>`;
+  }).join('');
+  return `<h2 class="section">Morning Wave — Tee Groups</h2>
+    <div class="banner">Set each player's group in Setup (or the Sheet's am_group column). Chicago partners usually ride together — two teams per group.</div>
+    <div class="flexrow">${cards || '<div class="dim">No players.</div>'}</div>`;
+}
+
+/* ================= MATCHERS ================= */
+function pairChicagoBalanced(){
+  const ps = [...activePlayers()].sort((a,b)=>a.hcp-b.hcp);
+  state.chicagoAssign = {};
+  const n = ps.length;
+  for(let i=0; i<Math.floor(n/2); i++){
+    state.chicagoAssign[ps[i].slot] = i+1;             // best...
+    state.chicagoAssign[ps[n-1-i].slot] = i+1;         // ...with worst
+  }
+  if(n % 2) state.chicagoAssign[ps[Math.floor(n/2)].slot] = Math.floor(n/2)+1;
+  render();
+}
+function pairChicagoRandom(){
+  const ps = [...activePlayers()];
+  for(let i=ps.length-1; i>0; i--){ const j=Math.floor(Math.random()*(i+1)); [ps[i],ps[j]]=[ps[j],ps[i]]; }
+  state.chicagoAssign = {};
+  ps.forEach((p,i)=> state.chicagoAssign[p.slot] = Math.floor(i/2)+1);
+  render();
+}
+function scrambleSerpentine(){
+  const ps = [...activePlayers()].filter(p=>state.scrambleIn[p.slot]!==false)
+    .sort((a,b)=>a.hcp-b.hcp);
+  const T = Math.max(1, Math.ceil(ps.length / Math.max(2, Number(state.scramble.size)||4)));
+  state.scramble.assign = {};
+  ps.forEach((p,i)=>{
+    const round = Math.floor(i/T);
+    const pos = i % T;
+    state.scramble.assign[p.slot] = (round % 2 === 0 ? pos : T-1-pos) + 1;
+  });
+  render();
+}
+function scrambleRandom(){
+  const ps = [...activePlayers()].filter(p=>state.scrambleIn[p.slot]!==false);
+  for(let i=ps.length-1; i>0; i--){ const j=Math.floor(Math.random()*(i+1)); [ps[i],ps[j]]=[ps[j],ps[i]]; }
+  const size = Math.max(2, Number(state.scramble.size)||4);
+  state.scramble.assign = {};
+  ps.forEach((p,i)=> state.scramble.assign[p.slot] = Math.floor(i/size)+1);
+  render();
+}
+function copyAssignments(){
+  const ps = activePlayers();
+  const lines = ps.map((p,i)=>{
+    const chi = Number(state.chicagoAssign[p.slot]) || Math.floor(i/2)+1;
+    const grp = Number(state.amGroup[p.slot]) || Math.ceil((i+1)/4);
+    const sin = state.scrambleIn[p.slot]===false ? 'N' : 'Y';
+    const sct = Number(state.scramble.assign[p.slot]) || '';
+    return `${p.name}\t${p.index}\t${chi}\t${grp}\t${sin}\t${sct}`;
+  });
+  const txt = 'name\tghin_index\tchicago_team\tam_group\tscramble_in\tscramble_team\n' + lines.join('\n');
+  navigator.clipboard.writeText(txt).then(
+    ()=>alert('Copied! Paste into the ROSTER tab of the Sheet (cell A1) — columns line up.'),
+    ()=>prompt('Copy this and paste into the Sheet ROSTER tab:', txt));
+}
+
+/* ================= GOOGLE SHEET SYNC (read-only, gviz) ================= */
+let syncTimer = null;
+async function fetchTab(tab){
+  const url = `https://docs.google.com/spreadsheets/d/${state.sync.sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tab)}&headers=1`;
+  const r = await fetch(url);
+  if(!r.ok) throw new Error(tab+': HTTP '+r.status);
+  const text = await r.text();
+  const m = text.match(/setResponse\(([\s\S]*)\);?\s*$/);
+  if(!m) throw new Error(tab+': unexpected response (is the Sheet link-shared?)');
+  const j = JSON.parse(m[1]);
+  const cols = j.table.cols.map(c=>(c.label||'').trim().toLowerCase());
+  return j.table.rows.map(row=>{
+    const o = {};
+    row.c.forEach((cell,i)=>{ o[cols[i]] = cell ? (cell.v ?? null) : null; });
+    return o;
+  });
+}
+function applySheetData(setupRows, rosterRows, amRows, scRows){
+  // SETUP key/value
+  const kv = {};
+  setupRows.forEach(r=>{ if(r.key) kv[String(r.key).trim()] = r.value; });
+  if(kv.event_name) state.eventName = String(kv.event_name);
+  if(kv.course_name) state.course.name = String(kv.course_name);
+  if(kv.tee) state.course.tee = String(kv.tee);
+  if(kv.slope) state.course.slope = Number(kv.slope);
+  if(kv.rating) state.course.rating = Number(kv.rating);
+  if(kv.tips_slope) state.scramble.slope = Number(kv.tips_slope);
+  if(kv.tips_rating) state.scramble.rating = Number(kv.tips_rating);
+  ['chicago','gross','net','par3','skins','scramble'].forEach(k=>{
+    if(kv['buyin_'+k] !== undefined && kv['buyin_'+k] !== null) state.buyins[k] = Number(kv['buyin_'+k]);
+  });
+  if(kv.ghost_enabled !== undefined) state.ghost.enabled = String(kv.ghost_enabled).toUpperCase()==='YES';
+  if(kv.scramble_team_size) state.scramble.size = Number(kv.scramble_team_size);
+  if(kv.scramble_pcts) state.scramble.pcts = String(kv.scramble_pcts);
+  for(let i=1;i<=6;i++) if(kv['teetime_'+i]) state.teetimes[i-1] = String(kv['teetime_'+i]);
+  for(let h=1;h<=18;h++){
+    if(kv['par_'+h]) state.course.pars[h-1] = Number(kv['par_'+h]);
+    if(kv['si_'+h]) state.course.si[h-1] = Number(kv['si_'+h]);
+  }
+  // ROSTER (row order = slot order)
+  const clean = rosterRows.filter(r=>r.name && String(r.name).trim() && !String(r.name).startsWith('^'));
+  state.players = clean.slice(0,MAXP).map(r=>({name:String(r.name).trim(), index:Number(r.ghin_index)||0}));
+  state.chicagoAssign = {}; state.amGroup = {}; state.scrambleIn = {}; state.scramble.assign = {};
+  clean.slice(0,MAXP).forEach((r,slot)=>{
+    if(r.chicago_team) state.chicagoAssign[slot] = Number(r.chicago_team);
+    if(r.am_group) state.amGroup[slot] = Number(r.am_group);
+    if(r.scramble_in !== null && r.scramble_in !== undefined && String(r.scramble_in).toUpperCase().startsWith('N'))
+      state.scrambleIn[slot] = false;
+    if(r.scramble_team) state.scramble.assign[slot] = Number(r.scramble_team);
+  });
+  // ghost mirror by name (needs roster loaded first)
+  if(kv.ghost_mirror !== undefined){
+    const nm = String(kv.ghost_mirror||'').trim().toLowerCase();
+    const hit = state.players.findIndex(p=>p.name.toLowerCase()===nm);
+    state.ghost.mirrorSlot = hit >= 0 ? hit : null;
+  }
+  // AM SCORES by matching name
+  state.scores = freshScores();
+  amRows.forEach(r=>{
+    if(!r.name) return;
+    const slot = state.players.findIndex(p=>p.name.toLowerCase()===String(r.name).trim().toLowerCase());
+    if(slot < 0) return;
+    for(let h=1;h<=18;h++){
+      const v = r['h'+h];
+      state.scores[slot][h-1] = (v===null||v===undefined||v==='') ? null : Number(v);
+    }
+  });
+  // SCRAMBLE SCORES by team number
+  state.scramble.scores = {};
+  scRows.forEach(r=>{
+    const tn = Number(r.team);
+    if(!tn) return;
+    state.scramble.scores[tn] = Array.from({length:18},(_,i)=>{
+      const v = r['h'+(i+1)];
+      return (v===null||v===undefined||v==='') ? null : Number(v);
+    });
+  });
+}
+async function syncNow(){
+  if(!state.sync.sheetId) return;
+  try{
+    const [su, ro, am, sc] = await Promise.all([
+      fetchTab('SETUP'), fetchTab('ROSTER'), fetchTab('AM SCORES'), fetchTab('SCRAMBLE SCORES')]);
+    applySheetData(su, ro, am, sc);
+    state.sync.lastAt = new Date().toLocaleTimeString();
+    state.sync.err = null;
+  }catch(e){
+    state.sync.err = String(e.message || e);
+  }
+  if(!document.activeElement || document.activeElement.tagName !== 'INPUT') render();
+}
+function startSync(){
+  if(syncTimer){ clearInterval(syncTimer); syncTimer = null; }
+  if(state.sync.sheetId){ syncNow(); syncTimer = setInterval(syncNow, 30000); }
+}
+
+function viewSync(R){
+  const s = state.sync;
+  const status = !s.sheetId ? '<span class="dim">Not connected — local mode.</span>'
+    : s.err ? `<span style="color:var(--red)">Error: ${esc(s.err)}</span>`
+    : s.lastAt ? `<span style="color:var(--green)">● LIVE — last sync ${esc(s.lastAt)}, refreshes every 30s</span>`
+    : '<span class="dim">Connecting…</span>';
+  return `<h2 class="section">Google Sheet Sync</h2>
+    <div class="cardpanel" style="max-width:760px">
+      <div class="setup-grid">
+        <label>Sheet ID</label><input type="text" id="syncId" value="${esc(s.sheetId)}" placeholder="the long code between /d/ and /edit in the Sheet URL">
+      </div>
+      <div style="margin:12px 0">${status}</div>
+      <div style="display:flex;gap:10px">
+        <button class="btn" onclick="startSync()">Connect / Refresh Now</button>
+        <button class="btn danger" onclick="(function(){state.sync.sheetId='';startSync();render();})()">Disconnect</button>
+      </div>
+      <div class="footer-note">When connected, the Sheet is the source of truth: roster, handicaps, teams, groups, buy-ins, and all scores flow FROM the Sheet every 30 seconds — score entry here is disabled. Scorekeepers edit the Sheet on their phones; this board just watches.
+      <br><br>Setup: upload BigStack_Score_Sheet_Template.xlsx to your personal Drive → File → Save as Google Sheets → Share → Anyone with the link → Editor → paste the Sheet ID above.</div>
+    </div>`;
+}
+function wireSync(){
+  const el = document.getElementById('syncId');
+  if(el) el.addEventListener('change', e=>{ state.sync.sheetId = e.target.value.trim(); save(); startSync(); });
+}
+
+/* ================= ACTIONS ================= */
+function simulateScores(){
+  const ps = activePlayers();
+  if(!ps.length){ alert('Add players in Setup first.'); return; }
+  ps.forEach(p=>{
+    for(let h=0; h<18; h++){
+      const par = state.course.pars[h];
+      state.scores[p.slot][h] = simHole(par, p.hcp);
+    }
+  });
+  // afternoon scramble: one team ball, usually at or under par
+  const R = computeAll();
+  R.scTeams.forEach(t=>{
+    state.scramble.scores[t.num] = state.course.pars.map(par=>{
+      const r = Math.random();
+      const d = r<0.08 ? -2 : r<0.45 ? -1 : r<0.85 ? 0 : 1;
+      return Math.max(1, par+d);
+    });
+  });
+  state.tab='leaderboard';
+  render();
+}
+function simHole(par, hcp){
+  // realistic-ish: better players skew low
+  const skill = Math.min(hcp,36)/36;             // 0 scratch-ish .. 1 hacker
+  let w;
+  if(par===3) w = [0.5, 8+6*(1-skill), 38, 32+10*skill, 14+8*skill, 5+6*skill];
+  else        w = [1+2*(1-skill), 9+8*(1-skill), 34, 30+10*skill, 16+9*skill, 6+8*skill];
+  const diffs=[-2,-1,0,1,2,3];
+  const tot=w.reduce((a,b)=>a+b,0);
+  let r=Math.random()*tot;
+  for(let i=0;i<w.length;i++){ r-=w[i]; if(r<=0) return Math.max(1, par+diffs[i]); }
+  return par+3;
+}
+function clearScores(){
+  if(!confirm('Clear all entered scores? (Roster and setup stay.)')) return;
+  state.scores = freshScores(); render();
+}
+function fullReset(){
+  if(!confirm('Full reset — course, roster, buy-ins, and scores go back to defaults. Sure?')) return;
+  localStorage.removeItem(LS_KEY);
+  state = load(); render();
+}
+function loadDemoRoster(){
+  state.players = demoRoster(); state.scores = freshScores(); render();
+}
+function exportCSV(){
+  const R = computeAll();
+  let csv = 'Player,Hcp,'+Array.from({length:18},(_,i)=>'H'+(i+1)).join(',')+',Gross,Net,Chicago Pts,Par3 Net,Money\n';
+  R.stats.forEach(s=>{
+    const money = R.money.get(s.p.slot)||0;
+    csv += `"${s.p.name}",${s.p.hcp},`+s.holes.map(h=>h.g===null?'':h.g).join(',')+
+           `,${s.gross||''},${s.net||''},${s.chi},${s.par3Net||''},${money}\n`;
+  });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='tournament_results.csv'; a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* expose for console/testing */
+window.__golf = {get state(){return state;}, computeAll, render, simulateScores, applySheetData, syncNow};
+render();
+startSync();
+</script>
+</body>
+</html>

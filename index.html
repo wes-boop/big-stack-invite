@@ -1095,12 +1095,15 @@ function applySheetData(setupRows, rosterRows, amRows, scRows){
     const hit = state.players.findIndex(p=>p.name.toLowerCase()===nm);
     state.ghost.mirrorSlot = hit >= 0 ? hit : null;
   }
-  // AM SCORES by matching name
+  // AM SCORES by matching name (duplicate names consume roster slots in order)
   state.scores = freshScores();
+  const usedSlots = new Set();
   amRows.forEach(r=>{
     if(!r.name) return;
-    const slot = state.players.findIndex(p=>p.name.toLowerCase()===String(r.name).trim().toLowerCase());
+    const nm = String(r.name).trim().toLowerCase();
+    const slot = state.players.findIndex((p,i)=>p.name.toLowerCase()===nm && !usedSlots.has(i));
     if(slot < 0) return;
+    usedSlots.add(slot);
     for(let h=1;h<=18;h++){
       const v = r['h'+h];
       state.scores[slot][h-1] = (v===null||v===undefined||v==='') ? null : Number(v);

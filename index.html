@@ -152,6 +152,8 @@ const DEFAULT_STATE = {
     assign:{},                                 // slot -> team number override
     scores:{}                                  // teamNum -> [18 gross]
   },
+  payouts:{chicago:'70,30', gross:'70,30', net:'70,30', par3:'70,30', scramble:'70,30'}, // % per place, up to 3
+  hcpMax:18,          // house rule: course handicap caps at 18
   chicagoAssign:{},   // slot -> chicago team number (empty = pair by roster order)
   scrambleIn:{},      // slot -> false when a player skips the PM scramble
   amGroup:{},         // slot -> tee group 1-5
@@ -176,6 +178,8 @@ function load(){
         if(!s.scramble) s.scramble = JSON.parse(JSON.stringify(DEFAULT_STATE.scramble));
         if(s.ghost.mirrorSlot === undefined) s.ghost.mirrorSlot = null;
         if(s.eventName === 'Old Works Invitational') s.eventName = 'The Big Stack Invite';
+        if(!s.payouts) s.payouts = {chicago:'70,30', gross:'70,30', net:'70,30', par3:'70,30', scramble:'70,30'};
+        if(s.hcpMax === undefined) s.hcpMax = 18;
         if(!s.chicagoAssign) s.chicagoAssign = {};
         if(!s.scrambleIn) s.scrambleIn = {};
         if(!s.amGroup) s.amGroup = {};
@@ -220,9 +224,10 @@ function demoRoster(){
 }
 
 /* ================= GOLF MATH ================= */
+function hcpCap(){ return Number(state.hcpMax) >= 0 ? Number(state.hcpMax) : 18; }
 function courseHcp(index){
   if(index===null || index===undefined || index==='') return 0;
-  return Math.round(Number(index) * Number(state.course.slope) / 113);
+  return Math.min(hcpCap(), Math.round(Number(index) * Number(state.course.slope) / 113));
 }
 function strokesOnHole(hcp, si){
   let s = 0;
@@ -388,7 +393,7 @@ function computeAll(){
   const scPlayers = ps.filter(p => state.scrambleIn[p.slot] !== false);
   pools.scramble = state.buyins.scramble * scPlayers.length;
   const scSize = Math.max(2, Number(sc.size)||4);
-  const scHcp = p => Math.round((Number(p.index)||0) * (Number(sc.slope)||113) / 113);
+  const scHcp = p => Math.min(hcpCap(), Math.round((Number(p.index)||0) * (Number(sc.slope)||113) / 113));
   const scTeamOf = (p, i) => Number(sc.assign[p.slot]) || Math.ceil((i+1)/scSize);
   const scTeamNums = [...new Set(scPlayers.map((p,i)=>scTeamOf(p,i)))].sort((a,b)=>a-b);
   const pcts = String(sc.pcts||'').split(',').map(x=>Number(x.trim())).filter(x=>!isNaN(x));
@@ -444,28 +449,49 @@ function computeAll(){
     chiW = {winners:teams.filter(t=>t.pts===best), best};
   }
 
-  // money list
+  // ---- placed payouts (up to 3 spots per game; ties split the straddled places) ----
   const money = new Map(); ps.forEach(p=>money.set(p.slot, 0));
   const add=(slot,amt)=>money.set(slot,(money.get(slot)||0)+amt);
-  grossW.winners.forEach(s=>add(s.p.slot, pools.gross/grossW.winners.length));
-  netW.winners.forEach(s=>add(s.p.slot, pools.net/netW.winners.length));
-  par3W.winners.forEach(s=>add(s.p.slot, pools.par3/par3W.winners.length));
+
+  function awardPlaces(entries, pool, splitsStr, asc){
+    // entries: [{val, label, payees:[slot,...]}]  → {placeGroups, paid}
+    const splits = String(splitsStr||'100').split(',').map(x=>Number(x.trim())).filter(x=>x>0).slice(0,3);
+    const sorted = [...entries].sort((a,b)=> asc ? a.val-b.val : b.val-a.val);
+    const groups = [];
+    let i = 0;
+    while(i < sorted.length && i < splits.length){
+      const grp = sorted.filter(e=>e.val===sorted[i].val && sorted.indexOf(e)>=i);
+      const covered = splits.slice(i, i+grp.length);
+      const total = covered.reduce((a,b)=>a+b,0)/100 * pool;
+      const each = total/grp.length;
+      grp.forEach(e=> e.payees.forEach(s=> add(s, each/e.payees.length)));
+      groups.push({place:i+1, tied:grp.length>1, labels:grp.map(e=>e.label), val:sorted[i].val, each});
+      i += grp.length;
+    }
+    return groups;
+  }
+
+  const placed = {};
+  placed.gross = awardPlaces(finished.map(s=>({val:s.gross, label:s.p.name, payees:[s.p.slot]})),
+                             pools.gross, state.payouts.gross, true);
+  placed.net   = awardPlaces(finished.map(s=>({val:s.net, label:s.p.name, payees:[s.p.slot]})),
+                             pools.net, state.payouts.net, true);
+  placed.par3  = awardPlaces(p3done.map(s=>({val:s.par3Net, label:s.p.name, payees:[s.p.slot]})),
+                             pools.par3, state.payouts.par3, true);
+  placed.chicago = awardPlaces(
+    (allDone ? teams : []).map(t=>({val:t.pts,
+      label:'T'+t.num+' '+[t.a,t.b].filter(Boolean).map(m=>m.isGhost?'👻':m.name.split(' ')[0]).join('/'),
+      payees:[t.a,t.b].filter(m=>m && !m.isGhost).map(m=>m.slot)})),
+    pools.chicago, state.payouts.chicago, false);
+  placed.scramble = awardPlaces(
+    scDone.map(t=>({val:t.net, label:'Team '+t.num,
+      payees:t.members.map(m=>m.slot)})),
+    pools.scramble, state.payouts.scramble, true);
   skinsWon.forEach(s=>add(s.winner.slot, skinValue));
-  if(chiW.winners.length){
-    const perTeam = pools.chicago / chiW.winners.length;
-    chiW.winners.forEach(t=>{
-      const real = [t.a,t.b].filter(m=>m && !m.isGhost);
-      real.forEach(m=>add(m.slot, perTeam/real.length));
-    });
-  }
-  if(scW.winners.length){
-    const perTeam = pools.scramble / scW.winners.length;
-    scW.winners.forEach(t=> t.members.forEach(m=>add(m.slot, perTeam/t.members.length)));
-  }
 
   return {stats, teams, pools, skins, skinsWon, skinValue,
           grossW, netW, par3W, chiW, par3Count, allDone, money, withGhost,
-          scTeams, scW, scSize};
+          scTeams, scW, scSize, placed};
 }
 
 /* ================= FORMAT HELPERS ================= */
@@ -493,7 +519,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&
 const TABS = [
   ['leaderboard','Leaderboard'], ['chicago','Chicago'], ['skins','Skins'],
   ['par3','Par 3'], ['scramble','Scramble'], ['groups','Groups'], ['payouts','Payouts'],
-  ['scores','Enter Scores'], ['setup','Setup'], ['sync','Sync']
+  ['rules','Rules'], ['scores','Enter Scores'], ['setup','Setup'], ['sync','Sync']
 ];
 let autoTimer = null;
 
@@ -509,6 +535,7 @@ function render(){
     case 'par3':        v.innerHTML = viewPar3(R); break;
     case 'scramble':    v.innerHTML = viewScramble(R); wireScramble(); break;
     case 'groups':      v.innerHTML = viewGroups(R); break;
+    case 'rules':       v.innerHTML = viewRules(R); break;
     case 'sync':        v.innerHTML = viewSync(R); wireSync(); break;
     case 'payouts':     v.innerHTML = viewPayouts(R); break;
     case 'scores':      v.innerHTML = viewScores(R); wireScoreInputs(); break;
@@ -599,7 +626,47 @@ function viewChicago(R){
         ${holes.map(h=>`<th>${h+1}</th>`).join('')}</tr>
       ${rows || '<tr><td class="dim">No teams yet.</td></tr>'}
     </table></div>
-    <div class="footer-note">Pool: ${fmt$(R.pools.chicago)} to the winning team${R.chiW.winners.length>1?' (currently tied — pool splits)':''}.</div>`;
+    <div class="footer-note">Pool: ${fmt$(R.pools.chicago)} — splits ${esc(state.payouts.chicago)}% by place.</div>
+    <div class="cardpanel" style="margin-top:16px">
+      <h2 class="section">Player Points</h2>
+      <div class="boardwrap"><table class="board">
+        <tr><th>Player</th><th>Team</th><th>Pts</th><th>Team Pts</th></tr>
+        ${rankRows(R.stats, s=>s.chi, false).map(({row:s})=>{
+          const tn = R.teams.find(t=>[t.a,t.b].some(m=>m && !m.isGhost && m.slot===s.p.slot));
+          return `<tr><td class="pname">${esc(s.p.name)}</td>
+            <td><span class="teamchip">${tn?'T'+tn.num:'—'}</span></td>
+            <td><b>${s.chi}</b></td><td class="dim">${tn?tn.pts:'—'}</td></tr>`;
+        }).join('')}
+        ${R.withGhost ? (()=>{const g=ghostRow(); const tn=R.teams.find(t=>[t.a,t.b].some(m=>m&&m.isGhost));
+          return `<tr><td class="pname dim">👻 ${esc(g.name)}</td><td><span class="teamchip">${tn?'T'+tn.num:'—'}</span><td class="dim">${tn?tn.pts-(R.stats.find(s=>[tn.a,tn.b].some(m=>m&&!m.isGhost&&m.slot===s.p.slot))||{chi:0}).chi:''}</td><td class="dim">${tn?tn.pts:''}</td></tr>`;})() : ''}
+      </table></div>
+      <div class="footer-note">Sorted by individual points. Team points = both partners combined.</div>
+    </div>`;
+}
+
+function viewRules(R){
+  const cap = hcpCap();
+  const g = (title, body) => `<div class="cardpanel" style="flex:1 1 320px">
+    <h2 class="section">${title}</h2><div style="font-size:14px;line-height:1.65">${body}</div></div>`;
+  return `<h2 class="section">House Rules & Game Definitions</h2>
+    <div class="banner">HANDICAPS — Your GHIN index converts to a course handicap: round(index × slope ÷ 113),
+      <b>capped at ${cap}</b>. Max one stroke per hole, taken on the hardest holes by stroke index.
+      Morning uses the ${esc(state.course.tee)} tees (slope ${state.course.slope}); the scramble converts at the ${esc(state.scramble.teeName)} slope (${state.scramble.slope}).</div>
+    <div class="flexrow">
+      ${g('Chicago — '+fmt$(state.buyins.chicago), `Two-man teams. Every player scores points on every hole based on <b>net</b> score:
+        <br>Eagle or better <b>5</b> · Birdie <b>3</b> · Par <b>2</b> · Bogey <b>1</b> · Double+ <b>0</b>.
+        <br>Team total = both partners combined, all 18 holes. Most points wins. Split: ${esc(state.payouts.chicago)}%.`)}
+      ${g('Gross — '+fmt$(state.buyins.gross), `Lowest total gross score, no handicap. The pure ball-striking title. Split: ${esc(state.payouts.gross)}%.`)}
+      ${g('Net — '+fmt$(state.buyins.net), `Lowest total net score (gross − course handicap). Everybody's game. Split: ${esc(state.payouts.net)}%.`)}
+      ${g('Par 3 Contest — '+fmt$(state.buyins.par3), `Combined <b>net</b> score on the ${R.par3Count} par-3 holes only. Lowest total wins. Split: ${esc(state.payouts.par3)}%.`)}
+      ${g('Skins — '+fmt$(state.buyins.skins), `Hole by hole: lowest <b>net</b> score wins the hole outright. Any tie = push, no carryover.
+        Pool splits evenly across all skins won.`)}
+      ${g('The Slag Scramble — '+fmt$(state.buyins.scramble)+' (optional PM)', `4-man scramble from the tips, one team ball per hole.
+        Team handicap = 25/20/15/10% of members' tips-course handicaps (best player first). Net total wins. Split: ${esc(state.payouts.scramble)}%.`)}
+      ${g('The Ghost 👻', `Odd player count? The ghost fills the last Chicago seat: it replays an assigned player's live card
+        (never its own teammate's), or makes flat par if unassigned. The ghost pays no buy-in and can't win skins or individual pools.`)}
+      ${g('Payout Ties', `Ties split the combined money of the places they straddle — two tied for 1st on a 70/30 split take 50 each.`)}
+    </div>`;
 }
 
 function viewSkins(R){
@@ -767,27 +834,30 @@ function viewPayouts(R){
   const entries = [...R.money.entries()].filter(([,v])=>v>0);
   const byMoney = entries.map(([slot,v])=>({name:activePlayers().find(p=>p.slot===slot)?.name||'?', v}))
                          .sort((a,b)=>b.v-a.v);
-  const gW = R.grossW.winners.map(s=>esc(s.p.name)).join(', ') || 'TBD';
-  const nW = R.netW.winners.map(s=>esc(s.p.name)).join(', ') || 'TBD';
-  const pW = R.par3W.winners.map(s=>esc(s.p.name)).join(', ') || 'TBD';
-  const cW = R.chiW.winners.map(t=>[t.a,t.b].filter(Boolean).map(m=>m.isGhost?'👻':esc(m.name)).join(' / ')).join(' , ') || 'TBD';
+  const PLACE = ['1st','2nd','3rd'];
+  function placesCell(groups, fallback){
+    if(!groups || !groups.length) return `<span class="dim">${fallback||'TBD'}</span>`;
+    return groups.map(g=>
+      `<div>${g.tied?'T':''}${PLACE[g.place-1]} — ${g.labels.map(esc).join(', ')}
+       <span class="dim">(${g.val})</span> <span class="money">${fmt$(g.each)}${g.tied?' ea':''}</span></div>`).join('');
+  }
+  const chiLead = R.allDone ? null :
+    (R.chiW.winners.map(t=>'T'+t.num).join(', ') + (R.chiW.best!==null?` leads at ${R.chiW.best} pts — pays when all cards are in`:''));
   return `<h2 class="section">Purse & Payouts</h2>
     ${R.allDone ? '' : '<div class="banner">Unofficial — not all cards are complete.</div>'}
     <div class="flexrow">
       <div class="cardpanel">
         <div class="boardwrap"><table class="board">
-          <tr><th>Game</th><th>Pool</th><th>Leader / Winner</th></tr>
-          <tr><td>Chicago</td><td>${fmt$(R.pools.chicago)}</td><td>${cW} ${R.chiW.best!==null?`<span class="dim">(${R.chiW.best} pts)</span>`:''}</td></tr>
-          <tr><td>Gross</td><td>${fmt$(R.pools.gross)}</td><td>${gW} ${R.grossW.best!==null?`<span class="dim">(${R.grossW.best})</span>`:''}</td></tr>
-          <tr><td>Net</td><td>${fmt$(R.pools.net)}</td><td>${nW} ${R.netW.best!==null?`<span class="dim">(${R.netW.best})</span>`:''}</td></tr>
-          <tr><td>Par 3</td><td>${fmt$(R.pools.par3)}</td><td>${pW} ${R.par3W.best!==null?`<span class="dim">(${R.par3W.best})</span>`:''}</td></tr>
-          <tr><td>Skins</td><td>${fmt$(R.pools.skins)}</td><td>${R.skinsWon.length} skins @ ${R.skinsWon.length?fmt$(R.skinValue):'—'}</td></tr>
-          <tr><td>Scramble (PM)</td><td>${fmt$(R.pools.scramble)}</td><td>${
-            R.scW.winners.length
-              ? R.scW.winners.map(t=>'Team '+t.num).join(', ') + ` <span class="dim">(net ${R.scW.best} — ${fmt$(R.pools.scramble/R.scW.winners.length/(R.scW.winners[0].members.length||1))}/player)</span>`
-              : 'TBD'}</td></tr>
+          <tr><th>Game</th><th>Pool</th><th>Split %</th><th>Places</th></tr>
+          <tr><td>Chicago</td><td>${fmt$(R.pools.chicago)}</td><td class="dim">${esc(state.payouts.chicago)}</td><td>${placesCell(R.placed.chicago, chiLead)}</td></tr>
+          <tr><td>Gross</td><td>${fmt$(R.pools.gross)}</td><td class="dim">${esc(state.payouts.gross)}</td><td>${placesCell(R.placed.gross)}</td></tr>
+          <tr><td>Net</td><td>${fmt$(R.pools.net)}</td><td class="dim">${esc(state.payouts.net)}</td><td>${placesCell(R.placed.net)}</td></tr>
+          <tr><td>Par 3</td><td>${fmt$(R.pools.par3)}</td><td class="dim">${esc(state.payouts.par3)}</td><td>${placesCell(R.placed.par3)}</td></tr>
+          <tr><td>Skins</td><td>${fmt$(R.pools.skins)}</td><td class="dim">per skin</td><td>${R.skinsWon.length} skins @ ${R.skinsWon.length?fmt$(R.skinValue):'—'}</td></tr>
+          <tr><td>Scramble (PM)</td><td>${fmt$(R.pools.scramble)}</td><td class="dim">${esc(state.payouts.scramble)}</td><td>${placesCell(R.placed.scramble)}</td></tr>
         </table></div>
-        <div class="footer-note">Buy-in ${fmt$(Object.values(state.buyins).reduce((a,b)=>a+Number(b||0),0))}/player — ${fmt$(state.buyins.scramble)} of it reserved for the afternoon scramble.</div>
+        <div class="footer-note">Ties split the combined money of the places they straddle (two tied for 1st on a 70/30 split take 50 each).
+          Splits are set in Setup here, or in the Sheet's SETUP tab via keys payout_chicago, payout_gross, payout_net, payout_par3, payout_scramble (e.g. "60,30,10").</div>
       </div>
       <div class="cardpanel">
         <div class="dim" style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Money List</div>
@@ -878,6 +948,15 @@ function viewSetup(R){
         <label>Scramble (PM)</label><input type="number" id="suBscramble" value="${state.buyins.scramble}">
       </div>
       <div class="footer-note">Total: ${fmt$(Object.values(state.buyins).reduce((a,b)=>a+Number(b||0),0))}/player.</div>
+      <h2 class="section" style="margin-top:18px">Payout Splits (% per place, up to 3)</h2>
+      <div class="setup-grid">
+        <label>Chicago</label><input type="text" id="suPchicago" value="${esc(state.payouts.chicago)}">
+        <label>Gross</label><input type="text" id="suPgross" value="${esc(state.payouts.gross)}">
+        <label>Net</label><input type="text" id="suPnet" value="${esc(state.payouts.net)}">
+        <label>Par 3</label><input type="text" id="suPpar3" value="${esc(state.payouts.par3)}">
+        <label>Scramble</label><input type="text" id="suPscramble" value="${esc(state.payouts.scramble)}">
+      </div>
+      <div class="footer-note">Examples: "100" (winner take all), "70,30" (two spots), "60,30,10" (three). Should sum to 100.</div>
       <h2 class="section" style="margin-top:18px">Ghost</h2>
       <label class="toggle"><input type="checkbox" id="suGhost" ${state.ghost.enabled?'checked':''}>
         Enable ghost (fills the odd seat in the Chicago)</label>
@@ -935,6 +1014,8 @@ function wireSetup(){
   bind('suRating',t=>state.course.rating=Number(t.value)||72);
   ['chicago','par3','net','gross','skins','scramble'].forEach(k=>
     bind('suB'+k, t=>state.buyins[k]=Number(t.value)||0));
+  ['chicago','gross','net','par3','scramble'].forEach(k=>
+    bind('suP'+k, t=>state.payouts[k]=t.value.trim()||'100'));
   bind('suGhost',   t=>state.ghost.enabled=t.checked);
   bind('suGhostHcp',t=>state.ghost.hcp=Number(t.value)||0);
   bind('suGhostMirror', t=>state.ghost.mirrorSlot = t.value===''? null : Number(t.value));
@@ -1072,6 +1153,10 @@ function applySheetData(setupRows, rosterRows, amRows, scRows){
   });
   if(kv.ghost_enabled !== undefined) state.ghost.enabled = String(kv.ghost_enabled).toUpperCase()==='YES';
   if(kv.scramble_team_size) state.scramble.size = Number(kv.scramble_team_size);
+  ['chicago','gross','net','par3','scramble'].forEach(k=>{
+    if(kv['payout_'+k]) state.payouts[k] = String(kv['payout_'+k]);
+  });
+  if(kv.hcp_max !== undefined && kv.hcp_max !== null) state.hcpMax = Number(kv.hcp_max);
   if(kv.scramble_pcts) state.scramble.pcts = String(kv.scramble_pcts);
   for(let i=1;i<=6;i++) if(kv['teetime_'+i]) state.teetimes[i-1] = String(kv['teetime_'+i]);
   for(let h=1;h<=18;h++){

@@ -6,21 +6,21 @@
 <title>The Big Stack Invite — Tour Board</title>
 <style>
   :root{
-    --bg:#081710; --panel:#0e2418; --panel2:#123021; --line:#1d4230;
-    --gold:#d9b64e; --gold-dim:#9c8330; --txt:#eef3ee; --muted:#8fa89a;
-    --red:#ff6057; --green:#54d98c; --blue:#7fb3ff;
+    --bg:#f5f2e8; --panel:#fdfcf5; --panel2:#efeadb; --line:#d9d3bd;
+    --gold:#a6821e; --gold-dim:#c9a227; --txt:#1e2b24; --muted:#75806f;
+    --red:#c0392b; --green:#1e7d46; --blue:#4a6fa5; --masters:#006747;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%;}
   body{
-    background:radial-gradient(1200px 600px at 50% -10%, #10311f 0%, var(--bg) 60%);
+    background:radial-gradient(1200px 600px at 50% -10%, #fffef8 0%, var(--bg) 60%);
     color:var(--txt); font-family:"Helvetica Neue", Arial, sans-serif;
     display:flex; flex-direction:column; height:100vh; overflow:hidden;
   }
   header{
     padding:14px 22px 10px; border-bottom:2px solid var(--gold-dim);
     display:flex; align-items:center; gap:18px; flex-wrap:wrap;
-    background:linear-gradient(180deg, rgba(217,182,78,.07), transparent);
+    background:linear-gradient(180deg, rgba(0,103,71,.05), transparent);
   }
   .crest{
     width:46px;height:46px;border:2px solid var(--gold);border-radius:50%;
@@ -29,15 +29,15 @@
   }
   .title h1{
     font-size:clamp(18px,2.6vw,30px); letter-spacing:.14em; font-weight:800;
-    color:var(--gold); text-transform:uppercase; white-space:nowrap;
+    color:var(--masters); text-transform:uppercase; white-space:nowrap;
   }
   .title .sub{font-size:clamp(10px,1.2vw,13px); letter-spacing:.22em; color:var(--muted); text-transform:uppercase; margin-top:2px;}
   .purse{margin-left:auto; text-align:right;}
   .purse .lbl{font-size:10px;letter-spacing:.25em;color:var(--muted);text-transform:uppercase;}
-  .purse .amt{font-size:clamp(20px,2.4vw,30px);font-weight:800;color:var(--gold);}
+  .purse .amt{font-size:clamp(20px,2.4vw,30px);font-weight:800;color:var(--masters);}
   nav{
     display:flex; gap:6px; padding:8px 18px; border-bottom:1px solid var(--line);
-    background:rgba(0,0,0,.25); flex-wrap:wrap; align-items:center;
+    background:rgba(0,103,71,.06); flex-wrap:wrap; align-items:center;
   }
   nav button{
     background:transparent; border:1px solid transparent; color:var(--muted);
@@ -45,7 +45,7 @@
     padding:8px 14px; cursor:pointer; border-radius:4px;
   }
   nav button:hover{color:var(--txt);}
-  nav button.active{color:var(--gold); border-color:var(--gold-dim); background:rgba(217,182,78,.08);}
+  nav button.active{color:var(--masters); border-color:var(--gold-dim); background:rgba(201,162,39,.14);}
   nav .spacer{flex:1;}
   nav .util{font-size:11px; letter-spacing:.1em; border:1px solid var(--line); color:var(--muted);}
   nav .util:hover{border-color:var(--gold-dim); color:var(--gold);}
@@ -63,7 +63,7 @@
   table.board td{
     padding:9px 10px; border-bottom:1px solid rgba(29,66,48,.55); font-size:15px; white-space:nowrap;
   }
-  table.board tr.leader td{background:rgba(217,182,78,.10);}
+  table.board tr.leader td{background:rgba(201,162,39,.16);}
   table.board tr.leader td:first-child{border-left:3px solid var(--gold);}
   .pos{font-weight:800; color:var(--gold); width:44px;}
   .pname{font-weight:700; letter-spacing:.04em; text-transform:uppercase;}
@@ -83,7 +83,7 @@
   .flexrow{display:flex; gap:16px; flex-wrap:wrap;}
   .flexrow > .cardpanel{flex:1 1 340px; min-width:300px;}
   input[type=text], input[type=number], input[type=date]{
-    background:#0a1c12; color:var(--txt); border:1px solid var(--line); border-radius:4px;
+    background:#fffef8; color:var(--txt); border:1px solid var(--line); border-radius:4px;
     padding:5px 7px; font-size:13px; width:100%;
   }
   input.scorecell{width:44px; text-align:center; font-size:15px; padding:6px 2px;}
@@ -93,7 +93,7 @@
   .setup-grid label{color:var(--muted); font-size:11px; letter-spacing:.12em; text-transform:uppercase; white-space:nowrap;}
   .toggle{display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:13px;}
   .banner{
-    background:rgba(217,182,78,.08); border:1px solid var(--gold-dim); border-radius:6px;
+    background:rgba(201,162,39,.10); border:1px solid var(--gold-dim); border-radius:6px;
     color:var(--gold); font-size:12px; letter-spacing:.08em; padding:8px 12px; margin-bottom:14px;
   }
   .skinwin{color:var(--gold); font-weight:800;}
@@ -738,7 +738,7 @@ function viewScramble(R){
       <td><input type="checkbox" data-scin="${p.slot}" ${isIn?'checked':''}></td>
       <td class="pname">${esc(p.name)}</td>
       <td class="dim" style="text-align:center">${Math.round((Number(p.index)||0)*(Number(sc.slope)||113)/113)}</td>
-      <td>${isIn?`<select data-scassign="${p.slot}" style="background:#0a1c12;color:var(--txt);border:1px solid var(--line);border-radius:4px;padding:4px">${opts}</select>`:'<span class="dim">out</span>'}</td></tr>`;
+      <td>${isIn?`<select data-scassign="${p.slot}" style="background:#fffef8;color:var(--txt);border:1px solid var(--line);border-radius:4px;padding:4px">${opts}</select>`:'<span class="dim">out</span>'}</td></tr>`;
   }).join('');
 
   const entryRows = R.scTeams.map(t=>{
@@ -853,17 +853,17 @@ function viewPayouts(R){
     (R.chiW.winners.map(t=>'T'+t.num).join(', ') + (R.chiW.best!==null?` leads at ${R.chiW.best} pts — pays when all cards are in`:''));
   return `<h2 class="section">Purse & Payouts</h2>
     ${R.allDone ? '' : '<div class="banner">Unofficial — not all cards are complete.</div>'}
-    <div class="flexrow">
+    <div>
       <div class="cardpanel">
         <div class="boardwrap"><table class="board">
           <tr><th>Game</th><th>Pool</th><th>Split %</th><th>Places</th></tr>
-          <tr><td>Chicago F9</td><td>${fmt$(R.pools.chicago/2)}</td><td class="dim">${esc(state.payouts.chicago)}</td><td>${placesCell(R.placed.chicagoF9, chiLead)}</td></tr>
-          <tr><td>Chicago B9</td><td>${fmt$(R.pools.chicago/2)}</td><td class="dim">${esc(state.payouts.chicago)}</td><td>${placesCell(R.placed.chicagoB9, chiLead)}</td></tr>
-          <tr><td>Gross</td><td>${fmt$(R.pools.gross)}</td><td class="dim">${esc(state.payouts.gross)}</td><td>${placesCell(R.placed.gross)}</td></tr>
-          <tr><td>Net</td><td>${fmt$(R.pools.net)}</td><td class="dim">${esc(state.payouts.net)}</td><td>${placesCell(R.placed.net)}</td></tr>
-          <tr><td>Par 3</td><td>${fmt$(R.pools.par3)}</td><td class="dim">${esc(state.payouts.par3)}</td><td>${placesCell(R.placed.par3)}</td></tr>
-          <tr><td>Skins</td><td>${fmt$(R.pools.skins)}</td><td class="dim">per skin</td><td>${R.skinsWon.length} skins @ ${R.skinsWon.length?fmt$(R.skinValue):'—'}</td></tr>
-          <tr><td>Scramble (PM)</td><td>${fmt$(R.pools.scramble)}</td><td class="dim">${esc(state.payouts.scramble)}</td><td>${placesCell(R.placed.scramble)}</td></tr>
+          <tr><td>Chicago F9</td><td>${fmt$(R.pools.chicago/2)}</td><td class="dim">${esc(state.payouts.chicago)}</td><td style="white-space:normal">${placesCell(R.placed.chicagoF9, chiLead)}</td></tr>
+          <tr><td>Chicago B9</td><td>${fmt$(R.pools.chicago/2)}</td><td class="dim">${esc(state.payouts.chicago)}</td><td style="white-space:normal">${placesCell(R.placed.chicagoB9, chiLead)}</td></tr>
+          <tr><td>Gross</td><td>${fmt$(R.pools.gross)}</td><td class="dim">${esc(state.payouts.gross)}</td><td style="white-space:normal">${placesCell(R.placed.gross)}</td></tr>
+          <tr><td>Net</td><td>${fmt$(R.pools.net)}</td><td class="dim">${esc(state.payouts.net)}</td><td style="white-space:normal">${placesCell(R.placed.net)}</td></tr>
+          <tr><td>Par 3</td><td>${fmt$(R.pools.par3)}</td><td class="dim">${esc(state.payouts.par3)}</td><td style="white-space:normal">${placesCell(R.placed.par3)}</td></tr>
+          <tr><td>Skins</td><td>${fmt$(R.pools.skins)}</td><td class="dim">per skin</td><td style="white-space:normal">${R.skinsWon.length} skins @ ${R.skinsWon.length?fmt$(R.skinValue):'—'}</td></tr>
+          <tr><td>Scramble (PM)</td><td>${fmt$(R.pools.scramble)}</td><td class="dim">${esc(state.payouts.scramble)}</td><td style="white-space:normal">${placesCell(R.placed.scramble)}</td></tr>
         </table></div>
         <div class="footer-note">Ties split the combined money of the places they straddle (two tied for 1st on a 70/30 split take 50 each).
           Splits are set in Setup here, or in the Sheet's SETUP tab via keys payout_chicago, payout_gross, payout_net, payout_par3, payout_scramble (e.g. "60,30,10").</div>
@@ -971,7 +971,7 @@ function viewSetup(R){
         Enable ghost (fills the odd seat in the Chicago)</label>
       <div class="setup-grid" style="margin-top:8px">
         <label>Ghost Card</label>
-        <select id="suGhostMirror" style="background:#0a1c12;color:var(--txt);border:1px solid var(--line);border-radius:4px;padding:5px">
+        <select id="suGhostMirror" style="background:#fffef8;color:var(--txt);border:1px solid var(--line);border-radius:4px;padding:5px">
           <option value="" ${state.ghost.mirrorSlot===null?'selected':''}>— Par every hole (neutral) —</option>
           ${(()=>{const aps=activePlayers(); const odd=aps.length%2===1?aps[aps.length-1]:null;
             return aps.filter(p=>!odd || p.slot!==odd.slot)
@@ -1063,7 +1063,7 @@ function viewGroups(R){
     }).join('');
     return `<div class="cardpanel" style="flex:1 1 240px">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <span style="color:var(--gold-l,#de9c5c);font-weight:800;letter-spacing:.12em">GROUP ${g}</span>
+        <span style="color:var(--masters);font-weight:800;letter-spacing:.12em">GROUP ${g}</span>
         <span class="bignum" style="font-size:24px">${t}</span>
       </div>
       <table class="board" style="margin-top:8px">

@@ -374,7 +374,9 @@ function computeAll(){
       });
       return any ? v : null;
     });
-    return {...t, pts, holePts};
+    const f9 = holePts.slice(0,9).reduce((a,b)=>a+(b||0),0);
+    const b9 = holePts.slice(9).reduce((a,b)=>a+(b||0),0);
+    return {...t, pts, holePts, f9, b9};
   });
 
   // pools (real players only pay)
@@ -478,11 +480,12 @@ function computeAll(){
                              pools.net, state.payouts.net, true);
   placed.par3  = awardPlaces(p3done.map(s=>({val:s.par3Net, label:s.p.name, payees:[s.p.slot]})),
                              pools.par3, state.payouts.par3, true);
-  placed.chicago = awardPlaces(
-    (allDone ? teams : []).map(t=>({val:t.pts,
+  // Chicago pays a Front 9 pot and a Back 9 pot (half the pool each)
+  const chiEntry = key => (allDone ? teams : []).map(t=>({val:t[key],
       label:'T'+t.num+' '+[t.a,t.b].filter(Boolean).map(m=>m.isGhost?'👻':m.name.split(' ')[0]).join('/'),
-      payees:[t.a,t.b].filter(m=>m && !m.isGhost).map(m=>m.slot)})),
-    pools.chicago, state.payouts.chicago, false);
+      payees:[t.a,t.b].filter(m=>m && !m.isGhost).map(m=>m.slot)}));
+  placed.chicagoF9 = awardPlaces(chiEntry('f9'), pools.chicago/2, state.payouts.chicago, false);
+  placed.chicagoB9 = awardPlaces(chiEntry('b9'), pools.chicago/2, state.payouts.chicago, false);
   placed.scramble = awardPlaces(
     scDone.map(t=>({val:t.net, label:'Team '+t.num,
       payees:t.members.map(m=>m.slot)})),
@@ -602,6 +605,8 @@ function viewLeaderboard(R){
           <th>Gross To Par</th><th>Gross</th><th>Thru</th></tr>
       ${rows || '<tr><td colspan="8" class="dim">No players yet — hit Setup.</td></tr>'}
     </table></div>
+    <div class="banner" style="margin-top:14px">CHICAGO POINTS (net vs par): Eagle+ 5 · Birdie 3 · Par 2 · Bogey 1 · Double+ 0
+      — F9 & B9 pots · Course hcp = round(index × ${state.course.slope} ÷ 113), max ${hcpCap()} · Full game rules in the RULES tab.</div>
     <div class="footer-note">Sorted by net to par. Gross & Net pools pay on completed 18-hole cards.</div>`;
 }
 
@@ -614,15 +619,17 @@ function viewChicago(R){
       <td class="pos">${label}</td>
       <td><span class="teamchip">T${t.num}</span></td>
       <td class="pname">${names}</td>
+      <td><b style="color:var(--gold)">${t.f9}</b></td>
+      <td><b style="color:var(--gold)">${t.b9}</b></td>
       <td class="bignum" style="font-size:18px">${t.pts}</td>
       ${holes.map(h=>`<td class="dim">${t.holePts[h]===null?'·':t.holePts[h]}</td>`).join('')}
     </tr>`;
   }).join('');
   return `<h2 class="section">Chicago — Two-Man Teams</h2>
     <div class="banner">Points on NET score: Eagle 5 · Birdie 3 · Par 2 · Bogey 1 · Double+ 0
-      ${R.withGhost? ' — 👻 Ghost fills the odd seat and makes par on every hole.':''}</div>
+      — pays FRONT 9 and BACK 9 pots (${fmt$(R.pools.chicago/2)} each)${R.withGhost? ' — 👻 Ghost fills the odd seat.':''}</div>
     <div class="boardwrap"><table class="board grid18">
-      <tr><th>Pos</th><th></th><th style="text-align:left">Team</th><th>Pts</th>
+      <tr><th>Pos</th><th></th><th style="text-align:left">Team</th><th>F9</th><th>B9</th><th>Tot</th>
         ${holes.map(h=>`<th>${h+1}</th>`).join('')}</tr>
       ${rows || '<tr><td class="dim">No teams yet.</td></tr>'}
     </table></div>
@@ -655,7 +662,8 @@ function viewRules(R){
     <div class="flexrow">
       ${g('Chicago — '+fmt$(state.buyins.chicago), `Two-man teams. Every player scores points on every hole based on <b>net</b> score:
         <br>Eagle or better <b>5</b> · Birdie <b>3</b> · Par <b>2</b> · Bogey <b>1</b> · Double+ <b>0</b>.
-        <br>Team total = both partners combined, all 18 holes. Most points wins. Split: ${esc(state.payouts.chicago)}%.`)}
+        <br>Team total = both partners combined. Pays <b>two pots</b>: most points on the FRONT 9 and most on the BACK 9
+        (half the pool each, each split ${esc(state.payouts.chicago)}% by place). Fresh start at the turn — no team is ever out of it.`)}
       ${g('Gross — '+fmt$(state.buyins.gross), `Lowest total gross score, no handicap. The pure ball-striking title. Split: ${esc(state.payouts.gross)}%.`)}
       ${g('Net — '+fmt$(state.buyins.net), `Lowest total net score (gross − course handicap). Everybody's game. Split: ${esc(state.payouts.net)}%.`)}
       ${g('Par 3 Contest — '+fmt$(state.buyins.par3), `Combined <b>net</b> score on the ${R.par3Count} par-3 holes only. Lowest total wins. Split: ${esc(state.payouts.par3)}%.`)}
@@ -849,7 +857,8 @@ function viewPayouts(R){
       <div class="cardpanel">
         <div class="boardwrap"><table class="board">
           <tr><th>Game</th><th>Pool</th><th>Split %</th><th>Places</th></tr>
-          <tr><td>Chicago</td><td>${fmt$(R.pools.chicago)}</td><td class="dim">${esc(state.payouts.chicago)}</td><td>${placesCell(R.placed.chicago, chiLead)}</td></tr>
+          <tr><td>Chicago F9</td><td>${fmt$(R.pools.chicago/2)}</td><td class="dim">${esc(state.payouts.chicago)}</td><td>${placesCell(R.placed.chicagoF9, chiLead)}</td></tr>
+          <tr><td>Chicago B9</td><td>${fmt$(R.pools.chicago/2)}</td><td class="dim">${esc(state.payouts.chicago)}</td><td>${placesCell(R.placed.chicagoB9, chiLead)}</td></tr>
           <tr><td>Gross</td><td>${fmt$(R.pools.gross)}</td><td class="dim">${esc(state.payouts.gross)}</td><td>${placesCell(R.placed.gross)}</td></tr>
           <tr><td>Net</td><td>${fmt$(R.pools.net)}</td><td class="dim">${esc(state.payouts.net)}</td><td>${placesCell(R.placed.net)}</td></tr>
           <tr><td>Par 3</td><td>${fmt$(R.pools.par3)}</td><td class="dim">${esc(state.payouts.par3)}</td><td>${placesCell(R.placed.par3)}</td></tr>

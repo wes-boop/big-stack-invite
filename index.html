@@ -154,6 +154,7 @@ const DEFAULT_STATE = {
   },
   payouts:{chicago:'70,30', gross:'70,30', net:'70,30', par3:'70,30', scramble:'70,30'}, // % per place, up to 3
   hcpMax:18,          // house rule: course handicap caps at 18
+  venmo:{},           // slot -> venmo handle (optional 'venmo' column in Sheet ROSTER)
   chicagoAssign:{},   // slot -> chicago team number (empty = pair by roster order)
   scrambleIn:{},      // slot -> false when a player skips the PM scramble
   amGroup:{},         // slot -> tee group 1-5
@@ -180,6 +181,7 @@ function load(){
         if(s.eventName === 'Old Works Invitational') s.eventName = 'The Big Stack Invite';
         if(!s.payouts) s.payouts = {chicago:'70,30', gross:'70,30', net:'70,30', par3:'70,30', scramble:'70,30'};
         if(s.hcpMax === undefined) s.hcpMax = 18;
+        if(!s.venmo) s.venmo = {};
         if(!s.chicagoAssign) s.chicagoAssign = {};
         if(!s.scrambleIn) s.scrambleIn = {};
         if(!s.amGroup) s.amGroup = {};
@@ -498,7 +500,8 @@ function computeAll(){
 }
 
 /* ================= FORMAT HELPERS ================= */
-const fmt$ = v => '$' + (Math.round(v*100)/100).toLocaleString(undefined,{maximumFractionDigits:2});
+const fmt$ = v => { const r = Math.round(v*100)/100;
+  return '$' + r.toLocaleString(undefined,{minimumFractionDigits:Number.isInteger(r)?0:2, maximumFractionDigits:2}); };
 function fmtPar(d, played){
   if(!played) return '<span class="dim">—</span>';
   if(d < 0) return `<span class="under">${d}</span>`;
@@ -522,7 +525,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&
 const TABS = [
   ['leaderboard','Leaderboard'], ['chicago','Chicago'], ['skins','Skins'],
   ['par3','Par 3'], ['scramble','Scramble'], ['groups','Groups'], ['payouts','Payouts'],
-  ['rules','Rules'], ['scores','Enter Scores'], ['setup','Setup'], ['sync','Sync']
+  ['rules','Rules'], ['settle','Settle Up'], ['scores','Enter Scores'], ['setup','Setup'], ['sync','Sync']
 ];
 let autoTimer = null;
 
@@ -539,6 +542,7 @@ function render(){
     case 'scramble':    v.innerHTML = viewScramble(R); wireScramble(); break;
     case 'groups':      v.innerHTML = viewGroups(R); break;
     case 'rules':       v.innerHTML = viewRules(R); break;
+    case 'settle':      v.innerHTML = viewSettle(R); break;
     case 'sync':        v.innerHTML = viewSync(R); wireSync(); break;
     case 'payouts':     v.innerHTML = viewPayouts(R); break;
     case 'scores':      v.innerHTML = viewScores(R); wireScoreInputs(); break;
@@ -1182,6 +1186,7 @@ function applySheetData(setupRows, rosterRows, amRows, scRows){
     if(r.scramble_in !== null && r.scramble_in !== undefined && String(r.scramble_in).toUpperCase().startsWith('N'))
       state.scrambleIn[slot] = false;
     if(r.scramble_team) state.scramble.assign[slot] = Number(r.scramble_team);
+    if(r.venmo) state.venmo[slot] = String(r.venmo).trim().replace(/^@/,'');
   });
   // ghost mirror by name (needs roster loaded first)
   if(kv.ghost_mirror !== undefined){
@@ -1255,6 +1260,77 @@ function viewSync(R){
 function wireSync(){
   const el = document.getElementById('syncId');
   if(el) el.addEventListener('change', e=>{ state.sync.sheetId = e.target.value.trim(); save(); startSync(); });
+}
+
+/* ================= SETTLE UP ================= */
+function viewSettle(R){
+  const ps = activePlayers();
+  const n = ps.length;
+  const morningEntry = ['chicago','gross','net','par3','skins'].reduce((a,k)=>a+Number(state.buyins[k]||0),0);
+  // ledger: entry, won, net — with even refund of any pool that went unpaid (e.g. zero skins won)
+  const rows = ps.map(p=>{
+    const entry = morningEntry + (state.scrambleIn[p.slot]!==false ? Number(state.buyins.scramble||0) : 0);
+    const won = R.money.get(p.slot) || 0;
+    return {p, entry, won};
+  });
+  const totalEntries = rows.reduce((a,r)=>a+r.entry,0);
+  const totalPaid = rows.reduce((a,r)=>a+r.won,0);
+  const refundEach = (R.allDone && n>0) ? (totalEntries-totalPaid)/n : 0;
+  rows.forEach(r=>{ r.net = r.won - r.entry + refundEach; });
+
+  // minimal transactions: biggest debtor pays biggest creditor
+  const debt = rows.filter(r=>r.net < -0.005).map(r=>({name:r.p.name, slot:r.p.slot, amt:-r.net}))
+                   .sort((a,b)=>b.amt-a.amt);
+  const cred = rows.filter(r=>r.net > 0.005).map(r=>({name:r.p.name, slot:r.p.slot, amt:r.net}))
+                   .sort((a,b)=>b.amt-a.amt);
+  const txns = [];
+  let di=0, ci=0;
+  while(di<debt.length && ci<cred.length){
+    const pay = Math.min(debt[di].amt, cred[ci].amt);
+    txns.push({from:debt[di], to:cred[ci], amt:pay});
+    debt[di].amt -= pay; cred[ci].amt -= pay;
+    if(debt[di].amt < 0.005) di++;
+    if(cred[ci].amt < 0.005) ci++;
+  }
+  const vlink = (t)=>{
+    const h = state.venmo[t.to.slot];
+    const amt = (Math.round(t.amt*100)/100).toFixed(2);
+    if(!h) return `<span class="money">${fmt$(t.amt)}</span>`;
+    const url = `https://venmo.com/${encodeURIComponent(h)}?txn=pay&amount=${amt}&note=${encodeURIComponent('The Big Stack Invite')}`;
+    return `<a href="${url}" target="_blank" style="color:var(--green);font-weight:700">${fmt$(t.amt)} → @${esc(h)}</a>`;
+  };
+  const ledger = [...rows].sort((a,b)=>b.net-a.net).map(r=>`
+    <tr><td class="pname">${esc(r.p.name)}</td>
+      <td class="dim">${fmt$(r.entry)}</td>
+      <td>${fmt$(r.won)}</td>
+      ${refundEach ? `<td class="dim">${fmt$(refundEach)}</td>` : ''}
+      <td><b class="${r.net>0.005?'money':(r.net<-0.005?'under':'dim')}">${r.net>=0?'+':''}${fmt$(Math.abs(r.net)).replace('$', r.net<0?'-$':'$')}</b></td></tr>`).join('');
+  return `<h2 class="section">Settle Up — Venmo Only, No Cash</h2>
+    ${R.allDone ? '<div class="banner">All cards are in — these numbers are final.</div>'
+                : '<div class="banner">Unofficial — not all cards are complete. Amounts move until every score is in.</div>'}
+    <div class="cardpanel">
+      <h2 class="section">Who Pays Whom (${txns.length} payment${txns.length===1?'':'s'} total)</h2>
+      <div class="boardwrap"><table class="board">
+        <tr><th>Pays</th><th></th><th>Receives</th><th>Amount</th></tr>
+        ${txns.map(t=>`<tr>
+          <td class="pname">${esc(t.from.name)}</td><td class="dim">→</td>
+          <td class="pname">${esc(t.to.name)}</td>
+          <td style="white-space:normal">${vlink(t)}</td></tr>`).join('')
+          || '<tr><td colspan="4" class="dim">Everyone is square.</td></tr>'}
+      </table></div>
+      <div class="footer-note">Fewest possible payments — nobody fronts cash, losers pay winners directly.
+        Add a "venmo" column (J) to the Sheet's ROSTER with each guy's handle and these become tap-to-pay links.</div>
+    </div>
+    <div class="cardpanel">
+      <h2 class="section">The Ledger</h2>
+      <div class="boardwrap"><table class="board">
+        <tr><th>Player</th><th>Entries</th><th>Won</th>${refundEach?'<th>Refund</th>':''}<th>Net</th></tr>
+        ${ledger}
+      </table></div>
+      <div class="footer-note">Entries: ${fmt$(morningEntry)} morning games${Number(state.buyins.scramble)?` + ${fmt$(state.buyins.scramble)} scramble (entrants only)`:''}.
+        ${refundEach?`An unclaimed pool (e.g. no skins won) refunds evenly — ${fmt$(refundEach)} each.`:''}
+        Nets always sum to zero when the day is final.</div>
+    </div>`;
 }
 
 /* ================= ACTIONS ================= */

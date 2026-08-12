@@ -230,7 +230,7 @@ function eventRoster(){ return [
   ['Tyson',     6.2, 2, 4, null],
   ['Bommy',     1.4, 2, 3, null],
   ['Jameson',  15.0, 3, 5, null],
-  ['Papa Fern',16.0, 3, 5, 'Brick'],
+  ['Papa Fern',16.0, 3, 5, 'Limestone'],
   ['Tyler',     4.9, 3, 6, null],
   ['Josh',     12.3, 3, 6, null],
   ['Justin',   13.7, 4, 7, null],
@@ -433,8 +433,8 @@ function computeAll(){
   const scPlayers = ps.filter(p => state.scrambleIn[p.slot] !== false);
   pools.scramble = state.buyins.scramble * scPlayers.length;
   const scSize = Math.max(2, Number(sc.size)||4);
-  // scramble: everyone from the Slag except Brick players, who move to Limestone
-  const scTee = p => (p.tee === 'Brick' ? 'Limestone' : (state.tees[sc.teeName] ? sc.teeName : 'Slag'));
+  // scramble: everyone from the Slag; Brick/Limestone players stay on Limestone
+  const scTee = p => (['Brick','Limestone'].includes(p.tee) ? 'Limestone' : (state.tees[sc.teeName] ? sc.teeName : 'Slag'));
   const scHcp = p => hcpFromTee(p.index, scTee(p));
   const scTeamOf = (p, i) => Number(sc.assign[p.slot]) || Math.ceil((i+1)/scSize);
   const scTeamNums = [...new Set(scPlayers.map((p,i)=>scTeamOf(p,i)))].sort((a,b)=>a-b);
@@ -530,11 +530,40 @@ function computeAll(){
     scDone.map(t=>({val:t.net, label:'Team '+t.num,
       payees:t.members.map(m=>m.slot)})),
     pools.scramble, state.payouts.scramble, true);
+  // scramble last-place tax: $1 per player on the losing team, paid to the champs
+  let scrambleBounty = null;
+  if(scDone.length === scTeams.length && scDone.length > 1){
+    const worst = Math.max(...scDone.map(t=>t.net));
+    const best  = Math.min(...scDone.map(t=>t.net));
+    if(worst !== best){
+      const losers  = scDone.filter(t=>t.net===worst);
+      const champs  = scDone.filter(t=>t.net===best);
+      const pot = losers.reduce((a,t)=>a+t.members.length,0);
+      losers.forEach(t=>t.members.forEach(m=>add(m.slot, -1)));
+      const payees = champs.flatMap(t=>t.members);
+      payees.forEach(m=>add(m.slot, pot/payees.length));
+      scrambleBounty = {losers:losers.map(t=>t.num), champs:champs.map(t=>t.num), pot};
+    }
+  }
+  // gross & net last-place tax: dead last pays $1 to that game's winner (final cards only)
+  function lastTax(list, key){
+    if(!allDone || list.length < 2) return null;
+    const worst = Math.max(...list.map(s=>s[key]));
+    const best  = Math.min(...list.map(s=>s[key]));
+    if(worst === best) return null;
+    const losers = list.filter(s=>s[key]===worst);
+    const champs = list.filter(s=>s[key]===best);
+    losers.forEach(s=>add(s.p.slot, -1));
+    champs.forEach(s=>add(s.p.slot, losers.length/champs.length));
+    return {losers:losers.map(s=>s.p.name), champs:champs.map(s=>s.p.name), pot:losers.length};
+  }
+  const grossTax = lastTax(finished, 'gross');
+  const netTax   = lastTax(finished, 'net');
   skinsWon.forEach(s=>add(s.winner.slot, skinValue));
 
   return {stats, teams, pools, skins, skinsWon, skinValue,
           grossW, netW, par3W, chiW, par3Count, allDone, money, withGhost,
-          scTeams, scW, scSize, placed};
+          scTeams, scW, scSize, placed, scrambleBounty, grossTax, netTax};
 }
 
 /* ================= FORMAT HELPERS ================= */
@@ -717,6 +746,8 @@ function viewRules(R){
       ${g('The Ghost 👻', `Odd player count? The ghost fills the last Chicago seat: it replays an assigned player's live card
         (never its own teammate's), or makes flat par if unassigned. The ghost pays no buy-in and can't win skins or individual pools.`)}
       ${g('Payout Ties', `Ties split the combined money of the places they straddle — two tied for 1st on a 70/30 split take 50 each.`)}
+      ${g('The Last-Place Dollar 💸', `Dead last in <b>Gross</b>, dead last in <b>Net</b>, and the last-place <b>scramble team</b>
+        ($1 per player) each pay a dollar straight to that game's winner. Cheap. Humiliating. Tradition.`)}
     </div>`;
 }
 
@@ -909,7 +940,12 @@ function viewPayouts(R){
           <tr><td>Skins</td><td>${fmt$(R.pools.skins)}</td><td class="dim">per skin</td><td style="white-space:normal">${R.skinsWon.length} skins @ ${R.skinsWon.length?fmt$(R.skinValue):'—'}</td></tr>
           <tr><td>Scramble (PM)</td><td>${fmt$(R.pools.scramble)}</td><td class="dim">${esc(state.payouts.scramble)}</td><td style="white-space:normal">${placesCell(R.placed.scramble)}</td></tr>
         </table></div>
-        <div class="footer-note">Ties split the combined money of the places they straddle (two tied for 1st on a 70/30 split take 50 each).
+        ${(R.grossTax||R.netTax||R.scrambleBounty) ? `<div class="banner" style="margin-top:12px">💸 LAST-PLACE DOLLARS —
+          ${R.grossTax? `Gross: ${R.grossTax.losers.map(esc).join(', ')} pays ${R.grossTax.champs.map(esc).join(', ')}. `:''}
+          ${R.netTax? `Net: ${R.netTax.losers.map(esc).join(', ')} pays ${R.netTax.champs.map(esc).join(', ')}. `:''}
+          ${R.scrambleBounty? `Scramble: Team ${R.scrambleBounty.losers.join('/')} pays $1/man (${fmt$(R.scrambleBounty.pot)}) to Team ${R.scrambleBounty.champs.join('/')}.`:''}</div>` : ''}
+      <div class="footer-note">Ties split the combined money of the places they straddle (two tied for 1st on a 70/30 split take 50 each).
+          Last-place dollar: dead last in Gross, Net, and the scramble (per player) pays $1 to that game's winner.
           Splits are set in Setup here, or in the Sheet's SETUP tab via keys payout_chicago, payout_gross, payout_net, payout_par3, payout_scramble (e.g. "60,30,10").</div>
       </div>
       <div class="cardpanel">

@@ -239,7 +239,7 @@ function eventRoster(){ return [
   ['Tyson',     6.2, 2, 4, null],
   ['Bommy',     1.4, 2, 3, null],
   ['Jameson',  15.0, 3, 5, null],
-  ['Papa Fern',16.0, 3, 5, 'SvrBrz'],
+  ['Papa Fern',16.0, 3, 5, 'Silver'],
   ['Tyler',     4.9, 3, 6, null],
   ['Josh',     12.3, 3, 6, null],
   ['Justin',   13.7, 4, 7, null],
@@ -443,7 +443,7 @@ function computeAll(){
   pools.scramble = state.buyins.scramble * scPlayers.length;
   const scSize = Math.max(2, Number(sc.size)||4);
   // scramble: everyone from the Black tips; SvrBrz/Bronze players stay forward
-  const scTee = p => (['SvrBrz','Bronze','Silver'].includes(p.tee) ? 'SvrBrz' : (state.tees[sc.teeName] ? sc.teeName : 'Black'));
+  const scTee = p => (['Silver','SvrBrz','Bronze'].includes(p.tee) ? p.tee : (state.tees[sc.teeName] ? sc.teeName : 'Black'));
   const scHcp = p => hcpFromTee(p.index, scTee(p));
   const scTeamOf = (p, i) => Number(sc.assign[p.slot]) || Math.ceil((i+1)/scSize);
   const scTeamNums = [...new Set(scPlayers.map((p,i)=>scTeamOf(p,i)))].sort((a,b)=>a-b);
@@ -776,7 +776,7 @@ function viewRules(R){
     <h2 class="section">${title}</h2><div style="font-size:14px;line-height:1.65">${body}</div></div>`;
   return `<h2 class="section">House Rules & Game Definitions</h2>
     <div class="banner">HANDICAPS & TEES — Morning: <b>0–4 index plays BLK/GLD</b> (71.8/127), <b>everyone else GOLD</b> (71.1/125),
-      Papa Fern plays <b>SVR/BRZ</b> (65.3/108). Scramble: everyone from the <b>BLACK tips</b> (74.1/130), Papa Fern stays SVR/BRZ.
+      Papa Fern plays <b>SILVER</b> (68.1/121). Scramble: everyone from the <b>BLACK tips</b> (74.1/130), Papa Fern stays Silver.
       Course handicap = round(index × slope ÷ 113 + (rating − 72)) — the rating adjustment keeps mixed tees fair — <b>capped at ${cap}</b>.
       Max one stroke per hole, taken by stroke index.</div>
     <div class="flexrow">

@@ -73,6 +73,14 @@
   .dim{color:var(--muted);}
   .money{color:var(--green); font-weight:700;}
   .grid18 th, .grid18 td{text-align:center; padding:6px 6px; font-size:13px;}
+  .sc{display:inline-flex; width:24px; height:24px; align-items:center; justify-content:center;
+      font-variant-numeric:tabular-nums;}
+  .sc.birdie{border:1.5px solid var(--red); border-radius:50%;}
+  .sc.eagle{border:1.5px solid var(--red); border-radius:50%;
+      box-shadow:0 0 0 2px var(--panel), 0 0 0 3.5px var(--red);}
+  .sc.bogey{border:1.5px solid var(--blue);}
+  .sc.dbl{border:1.5px solid var(--blue);
+      box-shadow:0 0 0 2px var(--panel), 0 0 0 3.5px var(--blue);}
   .grid18 td.hole-birdie{color:var(--red); font-weight:800;}
   .grid18 td.hole-eagle{color:var(--red); font-weight:800; text-decoration:underline;}
   .grid18 td.hole-bogey{color:var(--blue);}
@@ -594,9 +602,9 @@ const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&
 // Full controls live at ?admin (or any local/file open).
 const ADMIN = new URLSearchParams(location.search).has('admin')
   || location.protocol === 'file:' || ['localhost','127.0.0.1'].includes(location.hostname);
-const VIEWER_TABS = ['leaderboard','chicago','skins','par3','scramble','groups','payouts','rules','settle'];
+const VIEWER_TABS = ['leaderboard','cards','chicago','skins','par3','scramble','groups','payouts','rules','settle'];
 const TABS = [
-  ['leaderboard','Leaderboard'], ['chicago','Chicago'], ['skins','Skins'],
+  ['leaderboard','Leaderboard'], ['cards','Cards'], ['chicago','Chicago'], ['skins','Skins'],
   ['par3','Par 3'], ['scramble','Scramble'], ['groups','Groups'], ['payouts','Payouts'],
   ['rules','Rules'], ['settle','Settle Up'], ['scores','Enter Scores'], ['setup','Setup'], ['sync','Sync']
 ];
@@ -609,6 +617,7 @@ function render(){
   const v = document.getElementById('view');
   switch(state.tab){
     case 'leaderboard': v.innerHTML = viewLeaderboard(R); break;
+    case 'cards':       v.innerHTML = viewCards(R); break;
     case 'chicago':     v.innerHTML = viewChicago(R); break;
     case 'skins':       v.innerHTML = viewSkins(R); break;
     case 'par3':        v.innerHTML = viewPar3(R); break;
@@ -688,6 +697,36 @@ function viewLeaderboard(R){
     <div class="banner" style="margin-top:14px">CHICAGO POINTS (net vs par): Eagle+ 5 · Birdie 3 · Par 2 · Bogey 1 · Double+ 0
       — F9 & B9 pots · Course hcp = round(index × ${state.course.slope} ÷ 113), max ${hcpCap()} · Full game rules in the RULES tab.</div>
     <div class="footer-note">Sorted by net to par. Gross & Net pools pay on completed 18-hole cards.</div>`;
+}
+
+function viewCards(R){
+  const pars = state.course.pars;
+  const holes = Array.from({length:18},(_,i)=>i);
+  const mark = (g, par) => {
+    if(g===null) return '<span class="dim">·</span>';
+    const d = g - par;
+    const cls = d<=-2 ? 'sc eagle' : d===-1 ? 'sc birdie' : d===1 ? 'sc bogey' : d>=2 ? 'sc dbl' : 'sc';
+    return `<span class="${cls}">${g}</span>`;
+  };
+  const rows = R.stats.map(s=>{
+    const out = s.holes.slice(0,9).reduce((a,h)=>a+(h.g||0),0) || '';
+    const inn = s.holes.slice(9).reduce((a,h)=>a+(h.g||0),0) || '';
+    return `<tr>
+      <td class="pname" style="position:sticky;left:0;background:var(--panel)">${esc(s.p.name)} <span class="dim">(${s.p.hcp})</span></td>
+      ${holes.map(h=>`<td>${mark(s.holes[h].g, pars[h])}</td>`).join('')}
+      <td class="dim">${out}</td><td class="dim">${inn}</td>
+      <td><b>${s.thru? s.gross : ''}</b></td>
+      <td>${s.thru? fmtPar(s.toPar, true) : '<span class="dim">—</span>'}</td>
+    </tr>`;
+  }).join('');
+  return `<h2 class="section">The Cards — Gross</h2>
+    <div class="banner">⭕ birdie · ⭕⭕ eagle or better · ⬜ bogey · ⬜⬜ double or worse — the old-fashioned way.</div>
+    <div class="boardwrap"><table class="board grid18">
+      <tr><th style="text-align:left;position:sticky;left:0;background:var(--bg)">Player</th>
+        ${holes.map(h=>`<th>${h+1}<div class="dim" style="font-size:9px">P${pars[h]}</div></th>`).join('')}
+        <th>Out</th><th>In</th><th>Tot</th><th>±</th></tr>
+      ${rows}
+    </table></div>`;
 }
 
 function viewChicago(R){

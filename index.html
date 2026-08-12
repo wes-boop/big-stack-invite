@@ -1228,9 +1228,14 @@ async function fetchTab(tab){
   });
 }
 function applySheetData(setupRows, rosterRows, amRows, scRows){
-  // SETUP key/value
+  // SETUP key/value — Google's feed types the value column numerically and blanks
+  // out text values (tee times, payout splits, names); treat null/'' as "not provided"
+  // so they never overwrite local settings. Numbers always flow from the Sheet.
   const kv = {};
-  setupRows.forEach(r=>{ if(r.key) kv[String(r.key).trim()] = r.value; });
+  setupRows.forEach(r=>{
+    if(r.key && r.value !== null && r.value !== undefined && r.value !== '')
+      kv[String(r.key).trim()] = r.value;
+  });
   if(kv.event_name) state.eventName = String(kv.event_name);
   if(kv.course_name) state.course.name = String(kv.course_name);
   if(kv.tee) state.course.tee = String(kv.tee);
@@ -1241,7 +1246,8 @@ function applySheetData(setupRows, rosterRows, amRows, scRows){
   ['chicago','gross','net','par3','skins','scramble'].forEach(k=>{
     if(kv['buyin_'+k] !== undefined && kv['buyin_'+k] !== null) state.buyins[k] = Number(kv['buyin_'+k]);
   });
-  if(kv.ghost_enabled !== undefined) state.ghost.enabled = String(kv.ghost_enabled).toUpperCase()==='YES';
+  if(kv.ghost_enabled !== undefined && kv.ghost_enabled !== null)
+    state.ghost.enabled = String(kv.ghost_enabled).toUpperCase()==='YES';
   if(kv.scramble_team_size) state.scramble.size = Number(kv.scramble_team_size);
   ['chicago','gross','net','par3','scramble'].forEach(k=>{
     if(kv['payout_'+k]) state.payouts[k] = String(kv['payout_'+k]);
@@ -1267,7 +1273,7 @@ function applySheetData(setupRows, rosterRows, amRows, scRows){
     if(r.venmo) state.venmo[slot] = String(r.venmo).trim().replace(/^@/,'');
   });
   // ghost mirror by name (needs roster loaded first)
-  if(kv.ghost_mirror !== undefined){
+  if(kv.ghost_mirror !== undefined && kv.ghost_mirror !== null){
     const nm = String(kv.ghost_mirror||'').trim().toLowerCase();
     const hit = state.players.findIndex(p=>p.name.toLowerCase()===nm);
     state.ghost.mirrorSlot = hit >= 0 ? hit : null;

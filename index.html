@@ -173,7 +173,7 @@ const DEFAULT_STATE = {
   scrambleIn:{},      // slot -> false when a player skips the PM scramble
   amGroup:{},         // slot -> tee group 1-5
   teetimes:['7:50','8:00','8:10','8:20'],
-  sync:{sheetId:'', lastAt:null, err:null},
+  sync:{sheetId:'1X4G-sUuy_emmEII1CQIzXiBgq9cVV5KpIxolUML4MJA', lastAt:null, err:null},
   tab: 'leaderboard',
   auto: false
 };
@@ -214,6 +214,7 @@ function load(){
         if(!s.teetimes || ['7:20,7:30,7:40,7:50,8:10','7:20,7:30,7:40,7:50,8:10,8:20'].includes((s.teetimes||[]).join(',')))
           s.teetimes = ['7:20','7:30','7:40','7:50'];
         if(!s.sync) s.sync = {sheetId:'', lastAt:null, err:null};
+        if(!s.sync.sheetId) s.sync.sheetId = '1X4G-sUuy_emmEII1CQIzXiBgq9cVV5KpIxolUML4MJA';
 
         while(s.scores.length < MAXP) s.scores.push(Array(18).fill(null));
         return s;

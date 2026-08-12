@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Big Stack Invite — Teton Reserve</title>
+<title>The Big Stack Invite — Tour Board</title>
 <style>
   :root{
     --bg:#f5f2e8; --panel:#fdfcf5; --panel2:#efeadb; --line:#d9d3bd;
@@ -138,30 +138,30 @@
 <script>
 'use strict';
 /* ================= STATE ================= */
-const LS_KEY = 'teton_dashboard_v1';
+const LS_KEY = 'owib_dashboard_v1';
 const MAXP = 24;
 
 const DEFAULT_STATE = {
   eventName: 'The Big Stack Invite',
   course: {
-    name:'Teton Reserve', date:'2026-08-14', tee:'Mixed',
-    slope:125, rating:71.1,   // legacy fields; per-player tees below drive handicaps
-    pars:[5,3,5,3,4,3,4,5,4, 5,4,4,4,3,4,5,3,4],            // real Teton card
-    si:  [10,16,4,18,8,12,14,6,2, 1,7,15,11,17,5,9,13,3],   // real Teton card
-    yards:[524,197,526,139,419,208,373,504,449, 591,422,321,386,159,411,486,189,414] // Gold
+    name:'Old Works Golf Course', date:'2026-08-14', tee:'Mixed',
+    slope:129, rating:73.8,   // legacy fields; per-player tees below drive handicaps
+    pars:[4,4,5,3,4,5,3,4,4, 4,5,4,3,4,5,4,3,4],            // real card 03/21
+    si:  [11,17,3,7,1,5,13,9,15, 8,4,10,16,12,2,6,18,14],   // real card
+    yards:[416,310,532,170,424,552,190,360,404, 396,546,397,156,380,573,436,160,374] // Copper
   },
-  tees: {  // men's rating/slope from the Teton Reserve card
-    Black:{slope:130, rating:74.1}, BlkGld:{slope:127, rating:71.8},
-    Gold:{slope:125, rating:71.1}, Silver:{slope:121, rating:68.1},
-    SvrBrz:{slope:108, rating:65.3}, Bronze:{slope:104, rating:64.4}
+  tees: {  // men's rating/slope from the card
+    Slag:{slope:136, rating:76.1}, Gold:{slope:129, rating:73.8},
+    Copper:{slope:125, rating:71.9}, Limestone:{slope:120, rating:68.2},
+    Brick:{slope:105, rating:65.1}
   },
-  playerTee:{},  // slot -> tee override; default: index<5 BlkGld, else Gold
+  playerTee:{},  // slot -> tee override; default: index<5 Gold, else Copper
   buyins: {chicago:20, par3:5, net:5, gross:5, skins:5, scramble:10}, // $40 AM + $10 optional PM scramble
   players: [], // {name, index}
   ghost: {enabled:false, hcp:0, mirrorSlot:null},  // mirrorSlot: null = par ghost, else copies that player's card
   scores: [],  // scores[slot][hole] = int|null
   scramble: {
-    teeName:'Black', slope:130, rating:74.1,  // Black tips; SvrBrz players stay SvrBrz
+    teeName:'Slag', slope:136, rating:76.1,   // Slag tees; Brick players move to Limestone
     size:4, pcts:'25,20,15,10',               // allowance % applied low-hcp to high
     assign:{},                                 // slot -> team number override
     scores:{}                                  // teamNum -> [18 gross]
@@ -172,8 +172,8 @@ const DEFAULT_STATE = {
   chicagoAssign:{},   // slot -> chicago team number (empty = pair by roster order)
   scrambleIn:{},      // slot -> false when a player skips the PM scramble
   amGroup:{},         // slot -> tee group 1-5
-  teetimes:['7:50','8:00','8:10','8:20'],
-  sync:{sheetId:'', lastAt:null, err:null},
+  teetimes:['7:20','7:30','7:40','7:50'],
+  sync:{sheetId:'1r47V-wUcWgEOgjR_UtMaPjErhZX-XMH-9EBz8o-enl4', lastAt:null, err:null},
   tab: 'leaderboard',
   auto: false
 };
@@ -214,7 +214,7 @@ function load(){
         if(!s.teetimes || ['7:20,7:30,7:40,7:50,8:10','7:20,7:30,7:40,7:50,8:10,8:20'].includes((s.teetimes||[]).join(',')))
           s.teetimes = ['7:20','7:30','7:40','7:50'];
         if(!s.sync) s.sync = {sheetId:'', lastAt:null, err:null};
-
+        if(!s.sync.sheetId) s.sync.sheetId = '1r47V-wUcWgEOgjR_UtMaPjErhZX-XMH-9EBz8o-enl4';
         while(s.scores.length < MAXP) s.scores.push(Array(18).fill(null));
         return s;
       }
@@ -235,11 +235,11 @@ function eventRoster(){ return [
   ['Kreed',    18.0, 1, 1, null],
   ['Brevin',   16.0, 1, 2, null],
   ['Wes',       5.5, 2, 4, null],
-  ['Chad',      8.2, 2, 3, null],
+  ['Chad',     10.9, 2, 3, null],
   ['Tyson',     6.2, 2, 4, null],
   ['Bommy',     1.4, 2, 3, null],
   ['Jameson',  15.0, 3, 5, null],
-  ['Papa Fern',16.0, 3, 5, 'SvrBrz'],
+  ['Papa Fern',16.0, 3, 5, 'Limestone'],
   ['Tyler',     4.9, 3, 6, null],
   ['Josh',     12.3, 3, 6, null],
   ['Justin',   13.7, 4, 7, null],
@@ -263,7 +263,7 @@ function coursePar(){ return state.course.pars.reduce((a,b)=>a+Number(b||0),0) |
 function teeFor(slot, index){
   const t = state.playerTee[slot];
   if(t && state.tees[t]) return t;
-  return (Number(index)||0) < 5 ? 'BlkGld' : 'Gold';   // sticks play BLK/GLD combo, rest Gold
+  return (Number(index)||0) < 5 ? 'Gold' : 'Copper';   // moving up a tee: 0-4 Gold, rest Copper
 }
 function hcpFromTee(index, teeName){
   const t = state.tees[teeName] || {slope:113, rating:coursePar()};
@@ -442,8 +442,8 @@ function computeAll(){
   const scPlayers = ps.filter(p => state.scrambleIn[p.slot] !== false);
   pools.scramble = state.buyins.scramble * scPlayers.length;
   const scSize = Math.max(2, Number(sc.size)||4);
-  // scramble: everyone from the Black tips; SvrBrz/Bronze players stay forward
-  const scTee = p => (['SvrBrz','Bronze','Silver'].includes(p.tee) ? 'SvrBrz' : (state.tees[sc.teeName] ? sc.teeName : 'Black'));
+  // scramble: everyone from the Slag; Brick/Limestone players stay on Limestone
+  const scTee = p => (['Brick','Limestone'].includes(p.tee) ? 'Limestone' : (state.tees[sc.teeName] ? sc.teeName : 'Slag'));
   const scHcp = p => hcpFromTee(p.index, scTee(p));
   const scTeamOf = (p, i) => Number(sc.assign[p.slot]) || Math.ceil((i+1)/scSize);
   const scTeamNums = [...new Set(scPlayers.map((p,i)=>scTeamOf(p,i)))].sort((a,b)=>a-b);
@@ -775,8 +775,8 @@ function viewRules(R){
   const g = (title, body) => `<div class="cardpanel" style="flex:1 1 320px">
     <h2 class="section">${title}</h2><div style="font-size:14px;line-height:1.65">${body}</div></div>`;
   return `<h2 class="section">House Rules & Game Definitions</h2>
-    <div class="banner">HANDICAPS & TEES — Morning: <b>0–4 index plays BLK/GLD</b> (71.8/127), <b>everyone else GOLD</b> (71.1/125),
-      Papa Fern plays <b>SVR/BRZ</b> (65.3/108). Scramble: everyone from the <b>BLACK tips</b> (74.1/130), Papa Fern stays SVR/BRZ.
+    <div class="banner">HANDICAPS & TEES — Morning: <b>0–4 index plays GOLD</b> (73.8/129), <b>everyone else COPPER</b> (71.9/125),
+      Papa Fern plays <b>BRICK</b> (65.1/105). Scramble: everyone from the <b>SLAG</b> (76.1/136), Brick players move to <b>LIMESTONE</b> (68.2/120).
       Course handicap = round(index × slope ÷ 113 + (rating − 72)) — the rating adjustment keeps mixed tees fair — <b>capped at ${cap}</b>.
       Max one stroke per hole, taken by stroke index.</div>
     <div class="flexrow">
@@ -789,7 +789,7 @@ function viewRules(R){
       ${g('Par 3 Contest — '+fmt$(state.buyins.par3), `Combined <b>net</b> score on the ${R.par3Count} par-3 holes only. Lowest total wins. Split: ${esc(state.payouts.par3)}%.`)}
       ${g('Skins — '+fmt$(state.buyins.skins), `Hole by hole: lowest <b>net</b> score wins the hole outright. Any tie = push, no carryover.
         Pool splits evenly across all skins won.`)}
-      ${g('The Scramble — '+fmt$(state.buyins.scramble)+' (optional PM)', `4-man scramble from the Black tips, one team ball per hole.
+      ${g('The Slag Scramble — '+fmt$(state.buyins.scramble)+' (optional PM)', `4-man scramble from the tips, one team ball per hole.
         Team handicap = 25/20/15/10% of members' tips-course handicaps (best player first). Net total wins. Split: ${esc(state.payouts.scramble)}%.`)}
       ${g('The Ghost 👻', `Odd player count? The ghost fills the last Chicago seat: it replays an assigned player's live card
         (never its own teammate's), or makes flat par if unassigned. The ghost pays no buy-in and can't win skins or individual pools.`)}

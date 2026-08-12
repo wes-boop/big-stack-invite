@@ -136,18 +136,24 @@ const MAXP = 24;
 const DEFAULT_STATE = {
   eventName: 'The Big Stack Invite',
   course: {
-    name:'Old Works Golf Course', date:'2026-08-14', tee:'Gold',
-    slope:129, rating:73.8,
-    pars:[4,3,5,4,5,4,5,3,3, 4,3,5,4,4,4,5,4,3],
-    si:  [11,17,3,7,1,5,13,9,15, 8,16,4,12,2,10,6,18,14],
-    yards:[424,334,555,361,570,389,427,388,358, 395,177,409,459,411,202,440,380,390]
+    name:'Old Works Golf Course', date:'2026-08-14', tee:'Mixed Tees',
+    slope:129, rating:73.8,   // legacy fields; per-player tees below drive handicaps
+    pars:[4,4,5,3,4,5,3,4,4, 4,5,4,3,4,5,4,3,4],            // real card 03/21
+    si:  [11,17,3,7,1,5,13,9,15, 8,4,10,16,12,2,6,18,14],   // real card
+    yards:[416,310,532,170,424,552,190,360,404, 396,546,397,156,380,573,436,160,374] // Copper
   },
+  tees: {  // men's rating/slope from the card
+    Slag:{slope:136, rating:76.1}, Gold:{slope:129, rating:73.8},
+    Copper:{slope:125, rating:71.9}, Limestone:{slope:120, rating:68.2},
+    Brick:{slope:105, rating:65.1}
+  },
+  playerTee:{},  // slot -> tee override; default: index<5 Gold, else Copper
   buyins: {chicago:20, par3:5, net:5, gross:5, skins:5, scramble:10}, // $40 AM + $10 optional PM scramble
   players: [], // {name, index}
   ghost: {enabled:false, hcp:0, mirrorSlot:null},  // mirrorSlot: null = par ghost, else copies that player's card
   scores: [],  // scores[slot][hole] = int|null
   scramble: {
-    teeName:'Tips', slope:129, rating:73.8,   // set from the tips card
+    teeName:'Slag', slope:136, rating:76.1,   // Slag tees; Brick players move to Limestone
     size:4, pcts:'25,20,15,10',               // allowance % applied low-hcp to high
     assign:{},                                 // slot -> team number override
     scores:{}                                  // teamNum -> [18 gross]
@@ -158,7 +164,7 @@ const DEFAULT_STATE = {
   chicagoAssign:{},   // slot -> chicago team number (empty = pair by roster order)
   scrambleIn:{},      // slot -> false when a player skips the PM scramble
   amGroup:{},         // slot -> tee group 1-5
-  teetimes:['7:20','7:30','7:40','7:50','8:10','8:20'],
+  teetimes:['7:20','7:30','7:40','7:50'],
   sync:{sheetId:'1r47V-wUcWgEOgjR_UtMaPjErhZX-XMH-9EBz8o-enl4', lastAt:null, err:null},
   tab: 'leaderboard',
   auto: false
@@ -185,7 +191,19 @@ function load(){
         if(!s.chicagoAssign) s.chicagoAssign = {};
         if(!s.scrambleIn) s.scrambleIn = {};
         if(!s.amGroup) s.amGroup = {};
-        if(!s.teetimes || s.teetimes.length < 6) s.teetimes = ['7:20','7:30','7:40','7:50','8:10','8:20'];
+        // migrate to real-card era: old fabricated course data & old tee-time defaults get replaced
+        const OLD_SI = '11,17,3,7,1,5,13,9,15,8,16,4,12,2,10,6,18,14';
+        if(!s.course.si || s.course.si.join(',') === OLD_SI){
+          s.course.pars = [4,4,5,3,4,5,3,4,4, 4,5,4,3,4,5,4,3,4];
+          s.course.si   = [11,17,3,7,1,5,13,9,15, 8,4,10,16,12,2,6,18,14];
+          s.course.yards= [416,310,532,170,424,552,190,360,404, 396,546,397,156,380,573,436,160,374];
+          s.course.tee = 'Mixed Tees';
+        }
+        if(!s.tees) s.tees = JSON.parse(JSON.stringify(DEFAULT_STATE.tees));
+        if(!s.playerTee) s.playerTee = {};
+        if(s.scramble.teeName === 'Tips'){ s.scramble.teeName='Slag'; s.scramble.slope=136; s.scramble.rating=76.1; }
+        if(!s.teetimes || ['7:20,7:30,7:40,7:50,8:10','7:20,7:30,7:40,7:50,8:10,8:20'].includes((s.teetimes||[]).join(',')))
+          s.teetimes = ['7:20','7:30','7:40','7:50'];
         if(!s.sync) s.sync = {sheetId:'', lastAt:null, err:null};
         if(!s.sync.sheetId) s.sync.sheetId = '1r47V-wUcWgEOgjR_UtMaPjErhZX-XMH-9EBz8o-enl4';
         while(s.scores.length < MAXP) s.scores.push(Array(18).fill(null));
@@ -196,40 +214,57 @@ function load(){
   const s = JSON.parse(JSON.stringify(DEFAULT_STATE));
   s.players = demoRoster();
   s.scores = freshScores();
+  applyEventAssigns(s);
   return s;
 }
 function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
 
-function demoRoster(){
-  return [
-    {name:'Wes Parkinson',      index:14.2},
-    {name:'Sandy Bunker',       index:8.5},
-    {name:'Mike Shanks',        index:18.6},
-    {name:'Tommy Threeputt',    index:12.0},
-    {name:'Divot Dave Duffer',  index:22.4},
-    {name:'Chip N. Runn',       index:6.8},
-    {name:'Chuck Chunker',      index:16.1},
-    {name:'Lip-Out Larry',      index:10.3},
-    {name:'Gimme Jimmy',        index:9.9},
-    {name:'Snowman Stan',       index:20.5},
-    {name:'Mulligan Murphy',    index:13.4},
-    {name:'Hook McGraw',        index:7.2},
-    {name:'Yippy Gibbs',        index:19.8},
-    {name:'Justin Therough',    index:11.6},
-    {name:'Wormburner Willy',   index:24.1},
-    {name:'Otto B. Better',     index:5.4},
-    {name:'Foot Wedge Fred',    index:17.3},
-    {name:'Frank Wanker',       index:9.1},
-    {name:'Breakfast Ball Bruce', index:15.7},
-    {name:'Shankopotamus Sam',  index:21.2}
-  ];
+// The real Aug 14 field: [name, index, tee-time group, chicago team, tee override]
+function eventRoster(){ return [
+  ['Cole',      8.4, 1, 2, null],
+  ['Trey',      1.5, 1, 1, null],
+  ['Kreed',    18.0, 1, 1, null],
+  ['Brevin',   16.0, 1, 2, null],
+  ['Wes',       5.5, 2, 4, null],
+  ['Chad',     10.9, 2, 3, null],
+  ['Tyson',     6.2, 2, 4, null],
+  ['Bommy',     1.4, 2, 3, null],
+  ['Jameson',  15.0, 3, 5, null],
+  ['Papa Fern',16.0, 3, 5, 'Brick'],
+  ['Tyler',     4.9, 3, 6, null],
+  ['Josh',     12.3, 3, 6, null],
+  ['Justin',   13.7, 4, 7, null],
+  ['Ashton',    3.9, 4, 8, null],
+  ['Court',     8.6, 4, 7, null],
+  ['Carson',   13.0, 4, 8, null],
+]; }
+function demoRoster(){ return eventRoster().map(([name,index])=>({name, index})); }
+function applyEventAssigns(s){
+  eventRoster().forEach(([name, idx, grp, chi, tee], slot)=>{
+    s.amGroup[slot] = grp;
+    s.chicagoAssign[slot] = chi;
+    s.scramble.assign[slot] = grp;
+    if(tee) s.playerTee[slot] = tee;
+  });
 }
 
 /* ================= GOLF MATH ================= */
 function hcpCap(){ return Number(state.hcpMax) >= 0 ? Number(state.hcpMax) : 18; }
-function courseHcp(index){
+function coursePar(){ return state.course.pars.reduce((a,b)=>a+Number(b||0),0) || 72; }
+function teeFor(slot, index){
+  const t = state.playerTee[slot];
+  if(t && state.tees[t]) return t;
+  return (Number(index)||0) < 5 ? 'Gold' : 'Copper';   // moving up a tee: 0-4 Gold, rest Copper
+}
+function hcpFromTee(index, teeName){
+  const t = state.tees[teeName] || {slope:113, rating:coursePar()};
+  // mixed-tee equity: course hcp = index x slope/113 + (rating - par), capped, never below 0
+  const raw = (Number(index)||0) * t.slope / 113 + (t.rating - coursePar());
+  return Math.max(0, Math.min(hcpCap(), Math.round(raw)));
+}
+function courseHcp(index, slot){
   if(index===null || index===undefined || index==='') return 0;
-  return Math.min(hcpCap(), Math.round(Number(index) * Number(state.course.slope) / 113));
+  return hcpFromTee(index, teeFor(slot, index));
 }
 function strokesOnHole(hcp, si){
   let s = 0;
@@ -249,7 +284,8 @@ function activePlayers(){
   const out = [];
   state.players.forEach((p, slot)=>{
     if(p && p.name && p.name.trim() !== '' && slot < MAXP)
-      out.push({slot, name:p.name.trim(), index:Number(p.index)||0, hcp:courseHcp(p.index)});
+      out.push({slot, name:p.name.trim(), index:Number(p.index)||0,
+                hcp:courseHcp(p.index, slot), tee:teeFor(slot, p.index)});
   });
   return out.slice(0, MAXP);
 }
@@ -397,7 +433,9 @@ function computeAll(){
   const scPlayers = ps.filter(p => state.scrambleIn[p.slot] !== false);
   pools.scramble = state.buyins.scramble * scPlayers.length;
   const scSize = Math.max(2, Number(sc.size)||4);
-  const scHcp = p => Math.min(hcpCap(), Math.round((Number(p.index)||0) * (Number(sc.slope)||113) / 113));
+  // scramble: everyone from the Slag except Brick players, who move to Limestone
+  const scTee = p => (p.tee === 'Brick' ? 'Limestone' : (state.tees[sc.teeName] ? sc.teeName : 'Slag'));
+  const scHcp = p => hcpFromTee(p.index, scTee(p));
   const scTeamOf = (p, i) => Number(sc.assign[p.slot]) || Math.ceil((i+1)/scSize);
   const scTeamNums = [...new Set(scPlayers.map((p,i)=>scTeamOf(p,i)))].sort((a,b)=>a-b);
   const pcts = String(sc.pcts||'').split(',').map(x=>Number(x.trim())).filter(x=>!isNaN(x));
@@ -660,9 +698,10 @@ function viewRules(R){
   const g = (title, body) => `<div class="cardpanel" style="flex:1 1 320px">
     <h2 class="section">${title}</h2><div style="font-size:14px;line-height:1.65">${body}</div></div>`;
   return `<h2 class="section">House Rules & Game Definitions</h2>
-    <div class="banner">HANDICAPS — Your GHIN index converts to a course handicap: round(index × slope ÷ 113),
-      <b>capped at ${cap}</b>. Max one stroke per hole, taken on the hardest holes by stroke index.
-      Morning uses the ${esc(state.course.tee)} tees (slope ${state.course.slope}); the scramble converts at the ${esc(state.scramble.teeName)} slope (${state.scramble.slope}).</div>
+    <div class="banner">HANDICAPS & TEES — Morning: <b>0–4 index plays GOLD</b> (73.8/129), <b>everyone else COPPER</b> (71.9/125),
+      Papa Fern plays <b>BRICK</b> (65.1/105). Scramble: everyone from the <b>SLAG</b> (76.1/136), Brick players move to <b>LIMESTONE</b> (68.2/120).
+      Course handicap = round(index × slope ÷ 113 + (rating − 72)) — the rating adjustment keeps mixed tees fair — <b>capped at ${cap}</b>.
+      Max one stroke per hole, taken by stroke index.</div>
     <div class="flexrow">
       ${g('Chicago — '+fmt$(state.buyins.chicago), `Two-man teams. Every player scores points on every hole based on <b>net</b> score:
         <br>Eagle or better <b>5</b> · Birdie <b>3</b> · Par <b>2</b> · Bogey <b>1</b> · Double+ <b>0</b>.
@@ -738,10 +777,11 @@ function viewScramble(R){
     const cur = Number(sc.assign[p.slot]) || Math.ceil((i+1)/R.scSize);
     const opts = Array.from({length:Math.max(1,Math.ceil(ps.length/2))},(_,t)=>t+1)
       .map(t=>`<option value="${t}" ${t===cur?'selected':''}>Team ${t}</option>`).join('');
+    const pScTee = p.tee === 'Brick' ? 'Limestone' : (state.tees[sc.teeName] ? sc.teeName : 'Slag');
     return `<tr style="${isIn?'':'opacity:.4'}">
       <td><input type="checkbox" data-scin="${p.slot}" ${isIn?'checked':''}></td>
       <td class="pname">${esc(p.name)}</td>
-      <td class="dim" style="text-align:center">${Math.round((Number(p.index)||0)*(Number(sc.slope)||113)/113)}</td>
+      <td class="dim" style="text-align:center">${hcpFromTee(p.index, pScTee)} <span style="font-size:10px">${pScTee[0]}</span></td>
       <td>${isIn?`<select data-scassign="${p.slot}" style="background:#fffef8;color:var(--txt);border:1px solid var(--line);border-radius:4px;padding:4px">${opts}</select>`:'<span class="dim">out</span>'}</td></tr>`;
   }).join('');
 
@@ -927,12 +967,13 @@ function viewSetup(R){
   const c = state.course;
   const rosterRows = Array.from({length:MAXP},(_,i)=>{
     const p = state.players[i] || {name:'', index:''};
-    const hcp = (p.name && p.name.trim()) ? courseHcp(p.index) : '';
+    const hcp = (p.name && p.name.trim()) ? courseHcp(p.index, i) : '';
+    const tee = (p.name && p.name.trim()) ? teeFor(i, p.index) : '';
     return `<tr>
       <td class="dim">${i+1}</td>
       <td><input type="text" data-ros="name" data-i="${i}" value="${esc(p.name||'')}" placeholder="—"></td>
       <td><input type="number" step="0.1" data-ros="index" data-i="${i}" value="${p.index===''||p.index===undefined?'':p.index}" style="width:80px"></td>
-      <td class="dim" style="text-align:center">${hcp}</td>
+      <td class="dim" style="text-align:center">${hcp}${tee?` <span style="font-size:10px">(${esc(tee)})</span>`:''}</td>
     </tr>`;
   }).join('');
   const holes = Array.from({length:18},(_,h)=>h);
@@ -1179,8 +1220,9 @@ function applySheetData(setupRows, rosterRows, amRows, scRows){
   // ROSTER (row order = slot order)
   const clean = rosterRows.filter(r=>r.name && String(r.name).trim() && !String(r.name).startsWith('^'));
   state.players = clean.slice(0,MAXP).map(r=>({name:String(r.name).trim(), index:Number(r.ghin_index)||0}));
-  state.chicagoAssign = {}; state.amGroup = {}; state.scrambleIn = {}; state.scramble.assign = {};
+  state.chicagoAssign = {}; state.amGroup = {}; state.scrambleIn = {}; state.scramble.assign = {}; state.playerTee = {};
   clean.slice(0,MAXP).forEach((r,slot)=>{
+    if(r.tee && state.tees[String(r.tee).trim()]) state.playerTee[slot] = String(r.tee).trim();
     if(r.chicago_team) state.chicagoAssign[slot] = Number(r.chicago_team);
     if(r.am_group) state.amGroup[slot] = Number(r.am_group);
     if(r.scramble_in !== null && r.scramble_in !== undefined && String(r.scramble_in).toUpperCase().startsWith('N'))
@@ -1377,7 +1419,10 @@ function fullReset(){
   state = load(); render();
 }
 function loadDemoRoster(){
-  state.players = demoRoster(); state.scores = freshScores(); render();
+  state.players = demoRoster(); state.scores = freshScores();
+  state.chicagoAssign = {}; state.amGroup = {}; state.playerTee = {}; state.scramble.assign = {};
+  applyEventAssigns(state);
+  render();
 }
 function exportCSV(){
   const R = computeAll();

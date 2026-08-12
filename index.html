@@ -136,7 +136,7 @@ const MAXP = 24;
 const DEFAULT_STATE = {
   eventName: 'The Big Stack Invite',
   course: {
-    name:'Old Works Golf Course', date:'2026-08-14', tee:'Mixed Tees',
+    name:'Old Works Golf Course', date:'2026-08-14', tee:'Mixed',
     slope:129, rating:73.8,   // legacy fields; per-player tees below drive handicaps
     pars:[4,4,5,3,4,5,3,4,4, 4,5,4,3,4,5,4,3,4],            // real card 03/21
     si:  [11,17,3,7,1,5,13,9,15, 8,4,10,16,12,2,6,18,14],   // real card
@@ -197,8 +197,9 @@ function load(){
           s.course.pars = [4,4,5,3,4,5,3,4,4, 4,5,4,3,4,5,4,3,4];
           s.course.si   = [11,17,3,7,1,5,13,9,15, 8,4,10,16,12,2,6,18,14];
           s.course.yards= [416,310,532,170,424,552,190,360,404, 396,546,397,156,380,573,436,160,374];
-          s.course.tee = 'Mixed Tees';
+          s.course.tee = 'Mixed';
         }
+        if(s.course.tee === 'Mixed Tees') s.course.tee = 'Mixed';
         if(!s.tees) s.tees = JSON.parse(JSON.stringify(DEFAULT_STATE.tees));
         if(!s.playerTee) s.playerTee = {};
         if(s.scramble.teeName === 'Tips'){ s.scramble.teeName='Slag'; s.scramble.slope=136; s.scramble.rating=76.1; }
@@ -589,6 +590,11 @@ function rankRows(rows, valFn, asc=true){
 const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ================= RENDER ================= */
+// Viewer mode: the public hosted page shows a clean board — no entry/admin chrome.
+// Full controls live at ?admin (or any local/file open).
+const ADMIN = new URLSearchParams(location.search).has('admin')
+  || location.protocol === 'file:' || ['localhost','127.0.0.1'].includes(location.hostname);
+const VIEWER_TABS = ['leaderboard','chicago','skins','par3','scramble','groups','payouts','rules','settle'];
 const TABS = [
   ['leaderboard','Leaderboard'], ['chicago','Chicago'], ['skins','Skins'],
   ['par3','Par 3'], ['scramble','Scramble'], ['groups','Groups'], ['payouts','Payouts'],
@@ -620,20 +626,23 @@ function render(){
 function renderHeader(){
   const c = state.course;
   document.getElementById('hdrTitle').textContent = state.eventName;
-  document.getElementById('hdrSub').textContent =
-    `${c.name} · ${c.tee} Tees · Slope ${c.slope} / Rating ${c.rating} · ${c.date}`;
+  document.getElementById('hdrSub').textContent = ADMIN
+    ? `${c.name} · ${c.tee} Tees · Slope ${c.slope} / Rating ${c.rating} · ${c.date}`
+    : c.name;
   const n = activePlayers().length;
   const total = Object.values(state.buyins).reduce((a,b)=>a+Number(b||0),0) * n;
   document.getElementById('hdrPurse').textContent = fmt$(total);
 }
 function renderTabs(){
   const nav = document.getElementById('tabs');
-  nav.innerHTML = TABS.map(([id,lbl])=>
+  const tabs = ADMIN ? TABS : TABS.filter(([id])=>VIEWER_TABS.includes(id));
+  if(!ADMIN && !VIEWER_TABS.includes(state.tab)) state.tab = 'leaderboard';
+  nav.innerHTML = tabs.map(([id,lbl])=>
     `<button class="${state.tab===id?'active':''}" onclick="setTab('${id}')">${lbl}</button>`).join('')
-    + `<span class="spacer"></span>
+    + (ADMIN ? `<span class="spacer"></span>
        <button class="util" onclick="toggleAuto()">${state.auto?'📺 Auto: ON':'📺 Auto'}</button>
        <button class="util" onclick="simulateScores()">🎲 Simulate</button>
-       <button class="util danger" onclick="clearScores()">Clear Scores</button>`;
+       <button class="util danger" onclick="clearScores()">Clear Scores</button>` : '');
 }
 function setTab(t){ state.tab=t; render(); }
 function toggleAuto(){

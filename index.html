@@ -75,6 +75,10 @@
   .grid18 th, .grid18 td{text-align:center; padding:6px 6px; font-size:13px;}
   .sc{display:inline-flex; width:24px; height:24px; align-items:center; justify-content:center;
       font-variant-numeric:tabular-nums;}
+  .popcell{position:relative; display:inline-block;}
+  .pops{position:absolute; top:-2px; right:-1px; display:flex; gap:1px; pointer-events:none;}
+  .pops i{width:4px; height:4px; border-radius:50%; background:var(--masters); display:block;}
+  .popkey i{width:5px;height:5px;border-radius:50%;background:var(--masters);display:inline-block;vertical-align:middle;}
   .sc.birdie{border:1.5px solid var(--red); border-radius:50%;}
   .sc.eagle{border:1.5px solid var(--red); border-radius:50%;
       box-shadow:0 0 0 2px var(--panel), 0 0 0 3.5px var(--red);}
@@ -703,25 +707,27 @@ function viewLeaderboard(R){
 function viewCards(R){
   const pars = state.course.pars;
   const holes = Array.from({length:18},(_,i)=>i);
-  const mark = (g, par) => {
-    if(g===null) return '<span class="dim">·</span>';
+  const mark = (g, par, pops) => {
+    const dots = pops>0 ? `<span class="pops">${'<i></i>'.repeat(pops)}</span>` : '';
+    if(g===null) return `<span class="popcell"><span class="sc dim">·</span>${dots}</span>`;
     const d = g - par;
     const cls = d<=-2 ? 'sc eagle' : d===-1 ? 'sc birdie' : d===1 ? 'sc bogey' : d>=2 ? 'sc dbl' : 'sc';
-    return `<span class="${cls}">${g}</span>`;
+    return `<span class="popcell"><span class="${cls}">${g}</span>${dots}</span>`;
   };
   const rows = R.stats.map(s=>{
     const out = s.holes.slice(0,9).reduce((a,h)=>a+(h.g||0),0) || '';
     const inn = s.holes.slice(9).reduce((a,h)=>a+(h.g||0),0) || '';
     return `<tr>
       <td class="pname" style="position:sticky;left:0;background:var(--panel)">${esc(s.p.name)} <span class="dim">(${s.p.hcp})</span></td>
-      ${holes.map(h=>`<td>${mark(s.holes[h].g, pars[h])}</td>`).join('')}
+      ${holes.map(h=>`<td>${mark(s.holes[h].g, pars[h], strokesOnHole(s.p.hcp, state.course.si[h]))}</td>`).join('')}
       <td class="dim">${out}</td><td class="dim">${inn}</td>
       <td><b>${s.thru? s.gross : ''}</b></td>
       <td>${s.thru? fmtPar(s.toPar, true) : '<span class="dim">—</span>'}</td>
     </tr>`;
   }).join('');
   return `<h2 class="section">The Cards — Gross</h2>
-    <div class="banner">⭕ birdie · ⭕⭕ eagle or better · ⬜ bogey · ⬜⬜ double or worse — the old-fashioned way.</div>
+    <div class="banner">⭕ birdie · ⭕⭕ eagle or better · ⬜ bogey · ⬜⬜ double or worse
+      · <span class="popkey"><i></i></span> = a stroke on that hole (<span class="popkey"><i></i><i></i></span> = two) — the old-fashioned way.</div>
     <div class="boardwrap"><table class="board grid18">
       <tr><th style="text-align:left;position:sticky;left:0;background:var(--bg)">Player</th>
         ${holes.map(h=>`<th>${h+1}<div class="dim" style="font-size:9px">P${pars[h]}</div></th>`).join('')}
@@ -1016,8 +1022,10 @@ function viewScores(R){
     const s = R.stats.find(x=>x.p.slot===p.slot);
     const cells = Array.from({length:18},(_,h)=>{
       const v = state.scores[p.slot][h];
-      return `<td><input class="scorecell" type="number" min="1" max="15" ${state.sync.sheetId?'disabled':''}
-        value="${v===null?'':v}" data-slot="${p.slot}" data-hole="${h}"></td>`;
+      return `<td class="popcell" style="position:relative"><input class="scorecell" type="number" min="1" max="15" ${state.sync.sheetId?'disabled':''}
+        value="${v===null?'':v}" data-slot="${p.slot}" data-hole="${h}">${
+          (()=>{const n=strokesOnHole(p.hcp, state.course.si[h]);
+                return n>0?`<span class="pops">${'<i></i>'.repeat(n)}</span>`:'';})()}</td>`;
     }).join('');
     return `<tr>
       <td class="pname" style="position:sticky;left:0;background:var(--panel)">${esc(p.name)} <span class="dim">(${p.hcp})</span></td>

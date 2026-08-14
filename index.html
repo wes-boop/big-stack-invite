@@ -544,21 +544,7 @@ function computeAll(){
     scDone.map(t=>({val:t.net, label:'Team '+t.num,
       payees:t.members.map(m=>m.slot)})),
     pools.scramble, state.payouts.scramble, true);
-  // scramble last-place tax: $1 per player on the losing team, paid to the champs
-  let scrambleBounty = null;
-  if(scDone.length === scTeams.length && scDone.length > 1){
-    const worst = Math.max(...scDone.map(t=>t.net));
-    const best  = Math.min(...scDone.map(t=>t.net));
-    if(worst !== best){
-      const losers  = scDone.filter(t=>t.net===worst);
-      const champs  = scDone.filter(t=>t.net===best);
-      const pot = losers.reduce((a,t)=>a+t.members.length,0);
-      losers.forEach(t=>t.members.forEach(m=>add(m.slot, -1)));
-      const payees = champs.flatMap(t=>t.members);
-      payees.forEach(m=>add(m.slot, pot/payees.length));
-      scrambleBounty = {losers:losers.map(t=>t.num), champs:champs.map(t=>t.num), pot};
-    }
-  }
+  const scrambleBounty = null;   // no last-place dollar in the scramble
   // gross & net last-place tax: dead last pays $1 to that game's winner (final cards only)
   function lastTax(list, key){
     if(!allDone || list.length < 2) return null;
@@ -801,8 +787,8 @@ function viewRules(R){
       ${g('The Ghost 👻', `Odd player count? The ghost fills the last Chicago seat: it replays an assigned player's live card
         (never its own teammate's), or makes flat par if unassigned. The ghost pays no buy-in and can't win skins or individual pools.`)}
       ${g('Payout Ties', `Ties split the combined money of the places they straddle — two tied for 1st on a 70/30 split take 50 each.`)}
-      ${g('The Last-Place Dollar 💸', `Dead last in <b>Gross</b>, dead last in <b>Net</b>, and the last-place <b>scramble team</b>
-        ($1 per player) each pay a dollar straight to that game's winner. Cheap. Humiliating. Tradition.`)}
+      ${g('The Last-Place Dollar 💸', `Dead last in <b>Gross</b> and dead last in <b>Net</b> each pay a dollar
+        straight to that game's winner. Cheap. Humiliating. Tradition. (The scramble is exempt.)`)}
     </div>`;
 }
 
@@ -995,12 +981,12 @@ function viewPayouts(R){
           <tr><td>Skins</td><td>${fmt$(R.pools.skins)}</td><td class="dim">per skin</td><td style="white-space:normal">${R.skinsWon.length} skins @ ${R.skinsWon.length?fmt$(R.skinValue):'—'}</td></tr>
           <tr><td>Scramble (PM)</td><td>${fmt$(R.pools.scramble)}</td><td class="dim">${esc(state.payouts.scramble)}</td><td style="white-space:normal">${placesCell(R.placed.scramble)}</td></tr>
         </table></div>
-        ${(R.grossTax||R.netTax||R.scrambleBounty) ? `<div class="banner" style="margin-top:12px">💸 LAST-PLACE DOLLARS —
+        ${(R.grossTax||R.netTax) ? `<div class="banner" style="margin-top:12px">💸 LAST-PLACE DOLLARS —
           ${R.grossTax? `Gross: ${R.grossTax.losers.map(esc).join(', ')} pays ${R.grossTax.champs.map(esc).join(', ')}. `:''}
           ${R.netTax? `Net: ${R.netTax.losers.map(esc).join(', ')} pays ${R.netTax.champs.map(esc).join(', ')}. `:''}
-          ${R.scrambleBounty? `Scramble: Team ${R.scrambleBounty.losers.join('/')} pays $1/man (${fmt$(R.scrambleBounty.pot)}) to Team ${R.scrambleBounty.champs.join('/')}.`:''}</div>` : ''}
+</div>` : ''}
       <div class="footer-note">Ties split the combined money of the places they straddle (two tied for 1st on a 70/30 split take 50 each).
-          Last-place dollar: dead last in Gross, Net, and the scramble (per player) pays $1 to that game's winner.
+          Last-place dollar: dead last in Gross and in Net each pay $1 to that game's winner.
           Splits are set in Setup here, or in the Sheet's SETUP tab via keys payout_chicago, payout_gross, payout_net, payout_par3, payout_scramble (e.g. "60,30,10").</div>
       </div>
       <div class="cardpanel">

@@ -474,13 +474,13 @@ function computeAll(){
     scW = {winners:scDone.filter(t=>t.net===best), best};
   }
 
-  // skins: outright low NET per hole, real players only
+  // skins: outright low GROSS per hole, real players only
   const skins = [];
   for(let h=0; h<18; h++){
     const entries = stats.filter(s=>s.holes[h].g!==null);
     if(entries.length===0){ skins.push({hole:h, state:'open'}); continue; }
-    let min = Math.min(...entries.map(s=>s.holes[h].n));
-    const winners = entries.filter(s=>s.holes[h].n===min);
+    let min = Math.min(...entries.map(s=>s.holes[h].g));
+    const winners = entries.filter(s=>s.holes[h].g===min);
     if(winners.length===1) skins.push({hole:h, state:'won', winner:winners[0].p, net:min});
     else skins.push({hole:h, state:'tie', net:min, count:winners.length});
   }
@@ -780,7 +780,7 @@ function viewRules(R){
       ${g('Gross — '+fmt$(state.buyins.gross), `Lowest total gross score, no handicap. The pure ball-striking title. Split: ${esc(state.payouts.gross)}%.`)}
       ${g('Net — '+fmt$(state.buyins.net), `Lowest total net score (gross − course handicap). Everybody's game. Split: ${esc(state.payouts.net)}%.`)}
       ${g('Par 3 Contest — '+fmt$(state.buyins.par3), `Combined <b>net</b> score on the ${R.par3Count} par-3 holes only. Lowest total wins. Split: ${esc(state.payouts.par3)}%.`)}
-      ${g('Skins — '+fmt$(state.buyins.skins), `Hole by hole: lowest <b>net</b> score wins the hole outright. Any tie = push, no carryover.
+      ${g('Skins — '+fmt$(state.buyins.skins), `Hole by hole: lowest <b>gross</b> score wins the hole outright — no strokes, pure golf. Any tie = push, no carryover.
         Pool splits evenly across all skins won.`)}
       ${g('The Scramble — '+fmt$(state.buyins.scramble)+' (optional PM)', `4-man scramble from the Black tips, one team ball per hole.
         Team handicap = 25/20/15/10% of members' tips-course handicaps (best player first). Net total wins. Split: ${esc(state.payouts.scramble)}%.`)}
@@ -798,11 +798,11 @@ function viewSkins(R){
     let res, pay='';
     if(s.state==='open'){ res = '<span class="dim">—</span>'; }
     else if(s.state==='tie'){ res = `<span class="dim">Push (${s.count} tied @ ${s.net})</span>`; }
-    else { res = `<span class="skinwin">${esc(s.winner.name)}</span> <span class="dim">(net ${s.net})</span>`;
+    else { res = `<span class="skinwin">${esc(s.winner.name)}</span> <span class="dim">(${s.net})</span>`;
            pay = `<span class="money">${fmt$(R.skinValue)}</span>`; }
     return `<tr><td class="pos">${holeN}</td><td class="dim">Par ${par}</td><td>${res}</td><td>${pay}</td></tr>`;
   }).join('');
-  return `<h2 class="section">Skins — Outright Low Net</h2>
+  return `<h2 class="section">Skins — Outright Low Gross</h2>
     <div class="flexrow">
       <div class="cardpanel" style="flex:2 1 480px">
         <div class="boardwrap"><table class="board">
@@ -814,7 +814,7 @@ function viewSkins(R){
         <div class="bignum">${fmt$(R.pools.skins)}</div>
         <div style="margin-top:10px" class="dim">Skins won: <b style="color:var(--txt)">${R.skinsWon.length}</b></div>
         <div class="dim">Value per skin: <b class="money">${R.skinsWon.length?fmt$(R.skinValue):'—'}</b></div>
-        <div class="footer-note">Ties push — no carryover. Pool splits evenly across all skins won. Ghost never wins a skin.</div>
+        <div class="footer-note">GROSS skins — no handicap strokes. Ties push (no carryover). Pool splits evenly across all skins won. Ghost never wins a skin.</div>
       </div>
     </div>`;
 }
@@ -978,7 +978,7 @@ function viewPayouts(R){
           <tr><td>Gross</td><td>${fmt$(R.pools.gross)}</td><td class="dim">${esc(state.payouts.gross)}</td><td style="white-space:normal">${placesCell(R.placed.gross)}</td></tr>
           <tr><td>Net</td><td>${fmt$(R.pools.net)}</td><td class="dim">${esc(state.payouts.net)}</td><td style="white-space:normal">${placesCell(R.placed.net)}</td></tr>
           <tr><td>Par 3</td><td>${fmt$(R.pools.par3)}</td><td class="dim">${esc(state.payouts.par3)}</td><td style="white-space:normal">${placesCell(R.placed.par3)}</td></tr>
-          <tr><td>Skins</td><td>${fmt$(R.pools.skins)}</td><td class="dim">per skin</td><td style="white-space:normal">${R.skinsWon.length} skins @ ${R.skinsWon.length?fmt$(R.skinValue):'—'}</td></tr>
+          <tr><td>Skins (gross)</td><td>${fmt$(R.pools.skins)}</td><td class="dim">per skin</td><td style="white-space:normal">${R.skinsWon.length} skins @ ${R.skinsWon.length?fmt$(R.skinValue):'—'}</td></tr>
           <tr><td>Scramble (PM)</td><td>${fmt$(R.pools.scramble)}</td><td class="dim">${esc(state.payouts.scramble)}</td><td style="white-space:normal">${placesCell(R.placed.scramble)}</td></tr>
         </table></div>
         ${(R.grossTax||R.netTax) ? `<div class="banner" style="margin-top:12px">💸 LAST-PLACE DOLLARS —

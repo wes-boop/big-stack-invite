@@ -509,7 +509,7 @@ function computeAll(){
   const money = new Map(); ps.forEach(p=>money.set(p.slot, 0));
   const add=(slot,amt)=>money.set(slot,(money.get(slot)||0)+amt);
 
-  function awardPlaces(entries, pool, splitsStr, asc){
+  function awardPlaces(entries, pool, splitsStr, asc, commit=true){
     // entries: [{val, label, payees:[slot,...]}]  → {placeGroups, paid}
     const splits = String(splitsStr||'100').split(',').map(x=>Number(x.trim())).filter(x=>x>0).slice(0,3);
     const sorted = [...entries].sort((a,b)=> asc ? a.val-b.val : b.val-a.val);
@@ -520,7 +520,7 @@ function computeAll(){
       const covered = splits.slice(i, i+grp.length);
       const total = covered.reduce((a,b)=>a+b,0)/100 * pool;
       const each = total/grp.length;
-      grp.forEach(e=> e.payees.forEach(s=> add(s, each/e.payees.length)));
+      if(commit) grp.forEach(e=> e.payees.forEach(s=> add(s, each/e.payees.length)));
       groups.push({place:i+1, tied:grp.length>1, labels:grp.map(e=>e.label), val:sorted[i].val, each});
       i += grp.length;
     }
@@ -528,14 +528,49 @@ function computeAll(){
   }
 
   const placed = {};
-  placed.gross = awardPlaces(finished.map(s=>({val:s.gross, label:s.p.name, payees:[s.p.slot]})),
-                             pools.gross, state.payouts.gross, true);
-  // house rule: gross and net are one-or-the-other — gross is settled first,
-  // then net pays the best players who didn't already cash in gross
-  const grossPaid = new Set(placed.gross.flatMap(g=>g.labels));
-  const netField = finished.filter(s=>!grossPaid.has(s.p.name));
-  placed.net   = awardPlaces((netField.length?netField:finished).map(s=>({val:s.net, label:s.p.name, payees:[s.p.slot]})),
-                             pools.net, state.payouts.net, true);
+  // House rule: a player cashes in GROSS or NET, never both — and the committee uses the
+  // allocation that pays the biggest checks (no diluted three-way splits when a guy is
+  // worth more in the other pot). Brute-force the contenders, score lexicographically.
+  const nPlaces = String(state.payouts.gross||'100').split(',').filter(x=>x.trim()).length;
+  const byG = [...finished].sort((a,b)=>a.gross-b.gross);
+  const byN = [...finished].sort((a,b)=>a.net-b.net);
+  const pool = [...new Set([...byG.slice(0,nPlaces+3), ...byN.slice(0,nPlaces+3)])];   // contenders only
+  const rest = finished.filter(s=>!pool.includes(s));
+  const ent = (arr,key)=>arr.map(s=>({val:s[key], label:s.p.name, payees:[s.p.slot]}));
+  const evaluate = mask => {
+    const gSide = rest.slice(), nSide = rest.slice();
+    pool.forEach((s,i)=> ((mask>>i)&1 ? nSide : gSide).push(s));
+    const gG = awardPlaces(ent(gSide,'gross'), pools.gross, state.payouts.gross, true, false);
+    const nG = awardPlaces(ent(nSide,'net'),   pools.net,   state.payouts.net,   true, false);
+    const checks = [];
+    [gG,nG].forEach(gs=>gs.forEach(g=>g.labels.forEach(()=>checks.push(g.each))));
+    checks.sort((a,b)=>b-a);
+    // fair: a contender may only be moved to the net pot if he actually cashes there —
+    // nobody gets shuffled out of the money to fatten someone else's check
+    const netCash = new Set(nG.flatMap(g=>g.labels));
+    const valid = pool.every((s,i)=> !((mask>>i)&1) || netCash.has(s.p.name));
+    return {mask, gG, nG, checks, valid};
+  };
+  let best = null;
+  const combos = pool.length <= 12 ? (1<<pool.length) : 1;   // safety valve
+  for(let m=0; m<combos; m++){
+    const c = evaluate(m);
+    if(!c.valid) continue;
+    if(!best) { best = c; continue; }
+    for(let i=0; i<Math.max(c.checks.length, best.checks.length); i++){
+      const a = c.checks[i]||0, b = best.checks[i]||0;
+      if(a !== b){ if(a > b) best = c; break; }
+    }
+  }
+  if(best){
+    const gSide = rest.slice(), nSide = rest.slice();
+    pool.forEach((s,i)=> ((best.mask>>i)&1 ? nSide : gSide).push(s));
+    placed.gross = awardPlaces(ent(gSide,'gross'), pools.gross, state.payouts.gross, true);
+    placed.net   = awardPlaces(ent(nSide,'net'),   pools.net,   state.payouts.net,   true);
+  } else {
+    placed.gross = awardPlaces(ent(finished,'gross'), pools.gross, state.payouts.gross, true);
+    placed.net   = awardPlaces(ent(finished,'net'),   pools.net,   state.payouts.net,   true);
+  }
   placed.par3  = awardPlaces(p3done.map(s=>({val:s.par3Net, label:s.p.name, payees:[s.p.slot]})),
                              pools.par3, state.payouts.par3, true);
   // Chicago pays a Front 9 pot and a Back 9 pot (half the pool each)
@@ -782,7 +817,7 @@ function viewRules(R){
         <br>Team total = both partners combined. Pays <b>two pots</b>: most points on the FRONT 9 and most on the BACK 9
         (half the pool each, each split ${esc(state.payouts.chicago)}% by place). Fresh start at the turn — no team is ever out of it.`)}
       ${g('Gross — '+fmt$(state.buyins.gross), `Lowest total gross score, no handicap. The pure ball-striking title. Split: ${esc(state.payouts.gross)}%.`)}
-      ${g('Net — '+fmt$(state.buyins.net), `Lowest total net score (gross − course handicap). Everybody's game. Split: ${esc(state.payouts.net)}%.<br><b>One or the other:</b> gross is settled first, and anyone who cashed there is out of the net pot.`)}
+      ${g('Net — '+fmt$(state.buyins.net), `Lowest total net score (gross − course handicap). Everybody's game. Split: ${esc(state.payouts.net)}%.<br><b>One or the other:</b> nobody cashes both. The committee assigns each contender to the pot that pays him more, so the money comes in big checks instead of watered-down splits.`)}
       ${g('Par 3 Contest — '+fmt$(state.buyins.par3), `Combined <b>net</b> score on the ${R.par3Count} par-3 holes only. Lowest total wins. Split: ${esc(state.payouts.par3)}%.`)}
       ${g('Skins — '+fmt$(state.buyins.skins), `Hole by hole: lowest <b>gross</b> score wins the hole outright — no strokes, pure golf. Any tie = push, no carryover.
         Pool splits evenly across all skins won.`)}
@@ -990,7 +1025,7 @@ function viewPayouts(R){
           ${R.netTax? `Net: ${R.netTax.losers.map(esc).join(', ')} pays ${R.netTax.champs.map(esc).join(', ')}. `:''}
 </div>` : ''}
       <div class="footer-note">Ties split the combined money of the places they straddle (two tied for 1st on a 70/30 split take 50 each).
-          Gross &amp; Net are one-or-the-other — gross settles first, net pays the best players who didn't cash there. Last-place dollar: dead last in Gross and in Net each pay $1 to that game's winner.
+          Gross &amp; Net are one-or-the-other — each contender is placed in whichever pot pays him most (max-payout allocation), never both. Last-place dollar: dead last in Gross and in Net each pay $1 to that game's winner.
           Splits are set in Setup here, or in the Sheet's SETUP tab via keys payout_chicago, payout_gross, payout_net, payout_par3, payout_scramble (e.g. "60,30,10").</div>
       </div>
       <div class="cardpanel">

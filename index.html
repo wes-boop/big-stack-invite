@@ -165,7 +165,7 @@ const DEFAULT_STATE = {
   ghost: {enabled:false, hcp:0, mirrorSlot:null},  // mirrorSlot: null = par ghost, else copies that player's card
   scores: [],  // scores[slot][hole] = int|null
   scramble: {
-    teeName:'Black', slope:130, rating:74.1,  // Black tips; SvrBrz players stay SvrBrz
+    teeName:'Gold', slope:125, rating:71.1,   // scramble: everyone from the Golds
     size:4, pcts:'25,20,15,10',               // allowance % applied low-hcp to high
     assign:{},                                 // slot -> team number override
     scores:{}                                  // teamNum -> [18 gross]
@@ -214,7 +214,7 @@ function load(){
         if(s.course.tee === 'Mixed Tees') s.course.tee = 'Mixed';
         if(!s.tees) s.tees = JSON.parse(JSON.stringify(DEFAULT_STATE.tees));
         if(!s.playerTee) s.playerTee = {};
-        if(s.scramble.teeName === 'Tips'){ s.scramble.teeName='Slag'; s.scramble.slope=136; s.scramble.rating=76.1; }
+        if(['Tips','Slag','Black'].includes(s.scramble.teeName)){ s.scramble.teeName='Gold'; s.scramble.slope=125; s.scramble.rating=71.1; }
         if(!s.teetimes || ['7:20,7:30,7:40,7:50,8:10','7:20,7:30,7:40,7:50,8:10,8:20'].includes((s.teetimes||[]).join(',')))
           s.teetimes = ['7:20','7:30','7:40','7:50'];
         if(!s.sync) s.sync = {sheetId:'', lastAt:null, err:null};
@@ -447,8 +447,8 @@ function computeAll(){
   const scPlayers = ps.filter(p => state.scrambleIn[p.slot] !== false);
   pools.scramble = state.buyins.scramble * scPlayers.length;
   const scSize = Math.max(2, Number(sc.size)||4);
-  // scramble: everyone from the Black tips; SvrBrz/Bronze players stay forward
-  const scTee = p => (['Silver','SvrBrz','Bronze'].includes(p.tee) ? p.tee : (state.tees[sc.teeName] ? sc.teeName : 'Black'));
+  // scramble: everyone from the Golds
+  const scTee = p => (state.tees[sc.teeName] ? sc.teeName : 'Gold');
   const scHcp = p => hcpFromTee(p.index, scTee(p));
   const scTeamOf = (p, i) => Number(sc.assign[p.slot]) || Math.ceil((i+1)/scSize);
   const scTeamNums = [...new Set(scPlayers.map((p,i)=>scTeamOf(p,i)))].sort((a,b)=>a-b);
@@ -776,7 +776,7 @@ function viewRules(R){
     <h2 class="section">${title}</h2><div style="font-size:14px;line-height:1.65">${body}</div></div>`;
   return `<h2 class="section">House Rules & Game Definitions</h2>
     <div class="banner">HANDICAPS & TEES — Morning: <b>0–4 index plays BLK/GLD</b> (71.8/127), <b>everyone else GOLD</b> (71.1/125),
-      Papa Fern plays <b>SILVER</b> (68.1/121). Scramble: everyone from the <b>BLACK tips</b> (74.1/130), Papa Fern stays Silver.
+      Papa Fern plays <b>SILVER</b> (68.1/121). Scramble: <b>everyone from the GOLDS</b> (71.1/125).
       Course handicap = round(index × slope ÷ 113 + (rating − 72)) — the rating adjustment keeps mixed tees fair — <b>capped at ${cap}</b>.
       Max one stroke per hole, taken by stroke index.</div>
     <div class="flexrow">
@@ -789,7 +789,7 @@ function viewRules(R){
       ${g('Par 3 Contest — '+fmt$(state.buyins.par3), `Combined <b>net</b> score on the ${R.par3Count} par-3 holes only. Lowest total wins. Split: ${esc(state.payouts.par3)}%.`)}
       ${g('Skins — '+fmt$(state.buyins.skins), `Hole by hole: lowest <b>gross</b> score wins the hole outright — no strokes, pure golf. Any tie = push, no carryover.
         Pool splits evenly across all skins won.`)}
-      ${g('The Scramble — '+fmt$(state.buyins.scramble)+' (optional PM)', `4-man scramble from the Black tips, one team ball per hole.
+      ${g('The Scramble — '+fmt$(state.buyins.scramble)+' (optional PM)', `4-man scramble from the Golds, one team ball per hole.
         Team handicap = 25/20/15/10% of members' tips-course handicaps (best player first). Net total wins. Split: ${esc(state.payouts.scramble)}%.`)}
       ${g('The Ghost 👻', `Odd player count? The ghost fills the last Chicago seat: it replays an assigned player's live card
         (never its own teammate's), or makes flat par if unassigned. The ghost pays no buy-in and can't win skins or individual pools.`)}
@@ -1291,8 +1291,12 @@ function applySheetData(setupRows, rosterRows, amRows, scRows){
   if(kv.tee) state.course.tee = String(kv.tee);
   if(kv.slope) state.course.slope = Number(kv.slope);
   if(kv.rating) state.course.rating = Number(kv.rating);
-  if(kv.tips_slope) state.scramble.slope = Number(kv.tips_slope);
-  if(kv.tips_rating) state.scramble.rating = Number(kv.tips_rating);
+  // scramble tee is set in the dashboard (Scramble tab), not from the Sheet's tips_* keys —
+  // keeps one source of truth now that the scramble plays the same Golds as the morning
+  if(state.tees[state.scramble.teeName]){
+    state.scramble.slope  = state.tees[state.scramble.teeName].slope;
+    state.scramble.rating = state.tees[state.scramble.teeName].rating;
+  }
   ['chicago','gross','net','par3','skins','scramble'].forEach(k=>{
     if(kv['buyin_'+k] !== undefined && kv['buyin_'+k] !== null) state.buyins[k] = Number(kv['buyin_'+k]);
   });
